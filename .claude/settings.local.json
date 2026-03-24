@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(cargo check:*)",
+      "Bash(git -C \"E:/Repositories/projects/Zoranner/agent-tools\" remote -v)",
+      "Bash(for crate:*)",
+      "Bash(do)",
+      "Bash(file=\"E:/Repositories/projects/Zoranner/agent-tools/crates/$crate/Cargo.toml\")",
+      "Bash(sed -i 's/edition\\\\.workspace = true/edition.workspace = true\\\\nauthors.workspace = true\\\\nlicense.workspace = true\\\\nrepository.workspace = true/' \"$file\")",
+      "Bash(done)"
+    ]
+  }
+}
