@@ -1,4 +1,15 @@
-pub use agentool_core as core;
+pub mod error;
+pub mod tool;
+
+pub use error::{ToolError, ToolErrorCode};
+pub use tool::Tool;
+
+pub type ToolResult = Result<serde_json::Value, ToolError>;
+
+/// 兼容旧路径 `agentool::core::*`（原独立 crate 重导出）。
+pub mod core {
+    pub use crate::{Tool, ToolError, ToolErrorCode, ToolResult};
+}
 
 #[cfg(feature = "fs")]
 pub mod fs;
@@ -35,3 +46,6 @@ pub mod design;
 
 #[cfg(feature = "gui")]
 pub mod gui;
+
+#[cfg(feature = "todo")]
+pub mod todo;

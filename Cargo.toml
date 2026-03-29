@@ -1,22 +1,30 @@
-[workspace]
-members = [
-    "crates/agentool-core",
-    "crates/agentool",
-]
-resolver = "2"
-
-[workspace.package]
+[package]
+name = "agentool"
 version = "0.1.0"
 edition = "2021"
 authors = ["Zoranner"]
 license = "MIT"
 repository = "https://github.com/Zoranner/agent-tools"
+description = "A toolkit for document editing agents"
 
-[workspace.dependencies]
-# 内部包
-agentool-core = { path = "crates/agentool-core", version = "0.1.0" }
+[features]
+default = []
+fs = []
+search = []
+web = []
+md = []
+git = []
+memory = []
+exec = []
+code = []
+office = []
+browser = []
+design = []
+gui = []
+todo = []
+full = ["fs", "search", "web", "md", "git", "memory", "exec", "code", "office", "browser", "design", "gui", "todo"]
 
-# 外部依赖
+[dependencies]
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 git2 = "0.19"

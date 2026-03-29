@@ -2,6 +2,40 @@
 
 面向文档编辑智能体的工具套件，提供文件系统操作、内容搜索、网络获取、文档分析、版本控制和跨会话记忆能力。
 
+## 快速开始
+
+在 `Cargo.toml` 中添加依赖，通过 feature 按需引入功能模块：
+
+```toml
+[dependencies]
+agentool = { version = "0.1", features = ["fs", "search", "web", "git"] }
+```
+
+开启全部功能：
+
+```toml
+agentool = { version = "0.1", features = ["full"] }
+```
+
+## 功能模块
+
+| Feature | 工具 |
+|---------|------|
+| `fs` | `read_file` / `write_file` / `edit_file` / `create_directory` / `list_directory` / `delete_file` / `move_file` / `copy_file` |
+| `search` | `grep_search` / `glob_search` |
+| `web` | `web_search` / `web_fetch` |
+| `md` | `extract_toc` / `count_words` |
+| `git` | `git_status` / `git_diff` / `git_commit` / `git_log` |
+| `memory` | `memory_write` / `memory_read` / `memory_search` |
+| `exec` | 执行类工具 |
+| `code` | 代码分析工具 |
+| `office` | Office 文档工具 |
+| `browser` | 浏览器操作工具 |
+| `design` | 设计稿工具 |
+| `gui` | GUI 交互工具 |
+| `todo` | 任务管理工具 |
+| `full` | 全部模块 |
+
 ## 接口规范
 
 ### 工具定义格式
