@@ -22,7 +22,8 @@ browser = []
 design = []
 gui = []
 todo = []
-full = ["fs", "search", "web", "md", "git", "memory", "exec", "code", "office", "browser", "design", "gui", "todo"]
+interact = []
+full = ["fs", "search", "web", "md", "git", "memory", "exec", "code", "office", "browser", "design", "gui", "todo", "interact"]
 
 [dependencies]
 async-trait = "0.1"
