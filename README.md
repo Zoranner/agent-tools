@@ -1,20 +1,46 @@
 # Agent Tools
 
-面向文档编辑智能体的工具套件，提供文件系统操作、内容搜索、网络获取、文档分析、版本控制和跨会话记忆能力。
+面向 AI 智能体的 Rust 工具库，为 LLM 驱动的应用提供文件系统操作、内容搜索、网络获取、文档分析、版本控制和跨会话记忆能力。每个工具通过 JSON Schema 描述，与 OpenAI Function Calling / Anthropic Tool Use 等主流格式直接兼容。
 
 ## 快速开始
 
-在 `Cargo.toml` 中添加依赖，通过 feature 按需引入功能模块：
+在 `Cargo.toml` 中按需添加依赖：
 
 ```toml
 [dependencies]
 agentool = { version = "0.1", features = ["fs", "search", "web", "git"] }
 ```
 
-开启全部功能：
+开启全部已发布功能：
 
 ```toml
 agentool = { version = "0.1", features = ["full"] }
+```
+
+**示例：写入并读取文件**
+
+```rust
+use std::sync::Arc;
+
+use agentool::Tool;
+use agentool::fs::{all_tools, FsContext};
+
+async fn example() -> Result<(), agentool::ToolError> {
+    let ctx = Arc::new(FsContext::new(None, false).expect("workspace root"));
+    let tools = all_tools(ctx);
+
+    let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
+    let read  = tools.iter().find(|t| t.name() == "read_file").unwrap();
+
+    write.execute(serde_json::json!({
+        "path": "example.txt",
+        "content": "hello\n",
+    })).await?;
+
+    let out = read.execute(serde_json::json!({ "path": "example.txt" })).await?;
+    println!("{}", out["data"]["content"]);
+    Ok(())
+}
 ```
 
 ## 功能模块
@@ -27,172 +53,52 @@ agentool = { version = "0.1", features = ["full"] }
 | `md` | `extract_toc` / `count_words` |
 | `git` | `git_status` / `git_diff` / `git_commit` / `git_log` |
 | `memory` | `memory_write` / `memory_read` / `memory_search` |
-| `exec` | 执行类工具 |
-| `code` | 代码分析工具 |
-| `office` | Office 文档工具 |
-| `browser` | 浏览器操作工具 |
-| `design` | 设计稿工具 |
-| `gui` | GUI 交互工具 |
-| `todo` | 任务管理工具 |
 | `interact` | `ask` / `confirm` / `notify` |
-| `full` | 全部模块 |
+| `full` | 全部已发布模块 |
 
-## 接口规范
+> `exec` / `code` / `office` / `browser` / `design` / `gui` / `todo` 等模块尚在规划中，暂未发布。
 
-### 工具定义格式
+## 工具参考
 
-每个工具使用 JSON Schema 描述，兼容 OpenAI Function Calling 格式，可直接适配主流 LLM 供应商（Anthropic、OpenAI、Google 等）。
+### 文件系统（`fs`）
 
-```json
-{
-  "name": "tool_name",
-  "description": "工具功能描述",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "param1": {
-        "type": "string",
-        "description": "参数说明"
-      },
-      "param2": {
-        "type": "number",
-        "description": "参数说明"
-      }
-    },
-    "required": ["param1"]
-  }
-}
-```
-
-### 返回值格式
-
-所有工具返回统一的 JSON 结构。
-
-**成功**
-
-```json
-{
-  "success": true,
-  "data": {}
-}
-```
-
-**失败**
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "错误描述"
-  }
-}
-```
-
-### 错误码
-
-| 错误码 | 说明 |
-|--------|------|
-| `FILE_NOT_FOUND` | 文件或目录不存在 |
-| `PERMISSION_DENIED` | 无读写权限 |
-| `FILE_ALREADY_EXISTS` | 目标文件已存在 |
-| `DIRECTORY_NOT_EMPTY` | 目录非空，无法删除 |
-| `PATTERN_NOT_UNIQUE` | `edit_file` 的 `old_text` 在文件中匹配到多处 |
-| `PATTERN_NOT_FOUND` | `edit_file` 的 `old_text` 未找到 |
-| `INVALID_PATH` | 路径格式不合法 |
-| `NETWORK_ERROR` | 网络请求失败 |
-| `GIT_ERROR` | Git 操作失败 |
-| `MEMORY_KEY_NOT_FOUND` | 记忆条目不存在 |
+> **路径与沙箱**
+>
+> 所有 `fs` 工具共享同一个 `FsContext`：
+>
+> | 模式 | 说明 |
+> |------|------|
+> | `FsContext::new(root, false)`（默认） | **沙箱模式**：路径解析后必须落在工作区根下（含根本身），否则返回 `INVALID_PATH` |
+> | `FsContext::new(root, true)` | **放宽模式**：相对路径基于进程当前目录解析，不做范围限制 |
+>
+> `root` 为 `None` 时取进程当前目录。路径传入前先做 `.` / `..` 语法归一化；绝对路径若落在根外同样被拒绝。
 
 ---
 
-### `Tool::execute` 与 JSON 外壳
-
-库内 `Tool::execute` 的返回类型为 `Result<serde_json::Value, ToolError>`。**成功**时，`Ok` 中的 JSON 已包含上文约定的 `success` / `data` 外壳；**失败**时为 `Err(ToolError)`，由宿主/runtime 映射为 `success: false` 与 `error` 对象（字段与错误码表一致）。
-
-### 文件系统路径与安全（`fs`）
-
-使用 `agentool::fs::FsContext` 为全部 `fs` 工具提供共享配置：
-
-| 项 | 说明 |
-|----|------|
-| 工作区根 | `FsContext::new(root, allow_outside_root)` 中 `root` 为 `None` 时，取进程当前工作目录并规范化为绝对路径；否则使用给定目录作为根 |
-| `allow_outside_root == false`（默认） | 沙箱模式：解析后的路径必须落在工作区根之下（含边界），否则 `INVALID_PATH` |
-| `allow_outside_root == true` | 放宽模式：相对路径相对进程当前工作目录解析，不做「必须在根下」的校验 |
-
-路径会先进行 `.` / `..` 的语法归一化。沙箱模式下，若传入绝对路径且落在根外，同样返回 `INVALID_PATH`。
-
-**各工具补充语义**
-
-- `read_file`：目标必须是**普通文件**；若提供 `offset`，须 ≥ 1。`offset` 与 `limit` 须为**非负 JSON 整数**（不接受浮点数）。返回内容**保留原始换行符**（CRLF 不被归一化为 LF），也保留文件末尾换行；`total_lines` 为逻辑行数（与 `str::lines` 计数一致）。
-- `write_file`：覆盖已存在文件；**自动创建不存在的父目录**。
-- `edit_file`：`old_text` 不得为空；匹配次数为字面量子串匹配（与 `str::match_indices` 计数一致）。
-- `list_directory`：返回条目按 `name` 升序排序，便于调用方做稳定比较与回放。
-- `delete_file`：仅删除**普通文件**；若目标是目录，返回 `INVALID_PATH`（请使用其他流程处理目录删除）。
-- `move_file` / `copy_file`：源必须是普通文件；若目标路径已存在（任意类型），返回 `FILE_ALREADY_EXISTS`；两者都会自动创建目标路径不存在的父目录。`move_file` 在 `rename` 失败时会尝试「复制 + 删除源」（用于跨卷等场景）；若删除源失败，会 best-effort 清除已创建的目标副本，再返回错误，以避免留下无主文件。
-
-**Rust 示例**
-
-```rust
-use std::sync::Arc;
-
-use agentool::Tool;
-use agentool::fs::{all_tools, FsContext};
-
-async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
-    let ctx = Arc::new(FsContext::new(None, false).expect("workspace root"));
-    let tools = all_tools(ctx);
-
-    let write = tools
-        .iter()
-        .find(|t| t.name() == "write_file")
-        .expect("write_file tool");
-    let read = tools
-        .iter()
-        .find(|t| t.name() == "read_file")
-        .expect("read_file tool");
-
-    write
-        .execute(serde_json::json!({
-            "path": "example.txt",
-            "content": "hello\n",
-        }))
-        .await?;
-
-    let out = read
-        .execute(serde_json::json!({ "path": "example.txt" }))
-        .await?;
-    assert_eq!(out["success"], true);
-    Ok(())
-}
-```
-
-## 工具列表
-
-### 文件系统
-
 #### `read_file`
 
-读取文件内容（仅普通文件）。
+读取文本文件内容，支持按行分页。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `path` | `string` | 是 | 文件路径 |
-| `offset` | `integer` | 否 | 起始行号（从 1 开始，若提供则必须 ≥ 1） |
-| `limit` | `integer` | 否 | 读取行数（必须为非负整数） |
+| `path` | `string` | 是 | 文件路径（须为普通文件） |
+| `offset` | `integer` | 否 | 起始行号（从 1 开始，须 ≥ 1） |
+| `limit` | `integer` | 否 | 读取行数上限（须为非负整数） |
+
+`offset` 和 `limit` 只接受 JSON 整数，不接受浮点数。
 
 **返回**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `content` | `string` | 文件内容（保留原始换行符，含末尾换行） |
+| `content` | `string` | 文件内容，保留原始换行符（CRLF 不归一化）及末尾换行 |
 | `total_lines` | `number` | 文件逻辑行数 |
 
 ---
 
 #### `write_file`
 
-写入文件；文件不存在时创建，**并递归创建不存在的父目录**；已存在则覆盖。
+写入文件；文件不存在时创建，已存在则覆盖。自动递归创建不存在的父目录。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -209,12 +115,12 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `edit_file`
 
-精确替换文件中的某段文本，要求 `old_text` 在文件中唯一；`old_text` 不得为空字符串。
+精确替换文件中的某段文本。`old_text` 必须在文件中**唯一**出现，且不得为空字符串。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `path` | `string` | 是 | 文件路径 |
-| `old_text` | `string` | 是 | 待替换的原始文本 |
+| `old_text` | `string` | 是 | 待替换的原始文本（须唯一） |
 | `new_text` | `string` | 是 | 替换后的新文本 |
 
 **返回**
@@ -227,7 +133,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `create_directory`
 
-创建目录，支持递归创建多级目录。
+创建目录，支持递归创建多级目录。目录已存在时不报错。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -243,7 +149,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `list_directory`
 
-列出目录内容；返回条目按 `name` 升序排序。
+列出目录中的文件和子目录，结果按名称升序排序。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -253,7 +159,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `entries` | `Entry[]` | 条目列表 |
+| `entries` | `Entry[]` | 条目列表（按 `name` 升序） |
 | `entries[].name` | `string` | 文件或目录名 |
 | `entries[].type` | `"file" \| "directory"` | 类型 |
 | `entries[].size` | `number` | 文件大小（字节），目录为 0 |
@@ -262,7 +168,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `delete_file`
 
-删除**普通文件**（非目录）。
+删除普通文件。若目标是目录，返回 `INVALID_PATH`。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -278,7 +184,9 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `move_file`
 
-移动或重命名普通文件；目标路径已存在时失败。会自动创建目标路径不存在的父目录。若系统 `rename` 不可用，可能回退为复制后删除源文件。
+移动或重命名普通文件。目标路径已存在时失败，自动创建目标路径的父目录。
+
+跨卷移动时会自动回退为「复制 + 删除源」；若删除源失败，会尝试清除已创建的目标副本后返回错误，不留无主文件。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -296,7 +204,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `copy_file`
 
-复制普通文件；目标路径已存在时失败。会自动创建目标路径不存在的父目录。
+复制普通文件。目标路径已存在时失败，自动创建目标路径的父目录。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -312,7 +220,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 ---
 
-### 搜索
+### 搜索（`search`）
 
 #### `grep_search`
 
@@ -321,7 +229,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `pattern` | `string` | 是 | 搜索关键词或正则表达式 |
-| `path` | `string` | 否 | 搜索范围，默认当前目录 |
+| `path` | `string` | 否 | 搜索根目录，默认当前目录 |
 | `glob` | `string` | 否 | 文件名过滤，如 `**/*.md` |
 | `ignore_case` | `boolean` | 否 | 是否忽略大小写，默认 `false` |
 
@@ -338,7 +246,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `glob_search`
 
-按文件名模式匹配文件。
+按文件名 Glob 模式匹配文件。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -353,7 +261,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 ---
 
-### 网络
+### 网络（`web`）
 
 #### `web_search`
 
@@ -377,7 +285,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `web_fetch`
 
-抓取指定网页内容并转为 Markdown。
+抓取指定网页并转换为 Markdown。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -393,11 +301,11 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 ---
 
-### 文档
+### 文档（`md`）
 
 #### `extract_toc`
 
-提取文档的目录结构。
+提取 Markdown 文档的目录结构。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -408,7 +316,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `toc` | `TocItem[]` | 目录列表 |
-| `toc[].level` | `number` | 标题层级（1-6） |
+| `toc[].level` | `number` | 标题层级（1–6） |
 | `toc[].title` | `string` | 标题文本 |
 | `toc[].line` | `number` | 所在行号 |
 
@@ -416,7 +324,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `count_words`
 
-统计文档字数、段落数、标题数。
+统计文档字数及结构信息。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -434,7 +342,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 ---
 
-### 版本控制
+### 版本控制（`git`）
 
 #### `git_status`
 
@@ -473,7 +381,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `git_commit`
 
-暂存并提交文档变更。
+暂存并提交变更。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -510,7 +418,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 ---
 
-### 记忆
+### 记忆（`memory`）
 
 #### `memory_write`
 
@@ -571,11 +479,11 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 ---
 
-### 交互
+### 交互（`interact`）
 
 #### `ask`
 
-向用户或其他智能体提问，等待并返回回答。
+向用户提问，等待并返回回答。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -593,7 +501,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `confirm`
 
-向用户或其他智能体请求确认，等待并返回是/否结果。
+向用户请求确认，等待是/否结果。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -611,7 +519,7 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 #### `notify`
 
-向用户或其他智能体发送通知，无需等待回复。
+向用户发送通知，无需等待回复。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -623,3 +531,49 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `sent` | `boolean` | 是否发送成功 |
+
+---
+
+## 接口规范
+
+### 返回值格式
+
+所有工具返回统一的 JSON 结构。
+
+**成功**
+
+```json
+{
+  "success": true,
+  "data": {}
+}
+```
+
+**失败**
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "错误描述"
+  }
+}
+```
+
+在 Rust 中，`Tool::execute` 返回 `Result<serde_json::Value, ToolError>`：成功时 `Ok` 值已包含 `success / data` 外壳；失败时由宿主/runtime 将 `Err(ToolError)` 映射为 `success: false` 的 JSON。
+
+### 错误码
+
+| 错误码 | 说明 |
+|--------|------|
+| `FILE_NOT_FOUND` | 文件或目录不存在 |
+| `PERMISSION_DENIED` | 无读写权限 |
+| `FILE_ALREADY_EXISTS` | 目标文件已存在 |
+| `DIRECTORY_NOT_EMPTY` | 目录非空，无法删除 |
+| `PATTERN_NOT_FOUND` | `edit_file` 的 `old_text` 未找到 |
+| `PATTERN_NOT_UNIQUE` | `edit_file` 的 `old_text` 匹配到多处 |
+| `INVALID_PATH` | 路径格式不合法或超出沙箱范围 |
+| `NETWORK_ERROR` | 网络请求失败 |
+| `GIT_ERROR` | Git 操作失败 |
+| `MEMORY_KEY_NOT_FOUND` | 记忆条目不存在 |
