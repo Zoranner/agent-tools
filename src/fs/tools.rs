@@ -54,8 +54,16 @@ fs_tool!(
         "type": "object",
         "properties": {
             "path": { "type": "string", "description": "File path" },
-            "offset": { "type": "number", "description": "Starting line (1-based)" },
-            "limit": { "type": "number", "description": "Max lines to read" }
+            "offset": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Starting line (1-based, integer only)"
+            },
+            "limit": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Max lines to read (integer only)"
+            }
         },
         "required": ["path"]
     }),
@@ -138,7 +146,7 @@ fs_tool!(
 fs_tool!(
     MoveFileTool,
     "move_file",
-    "Move or rename a file.",
+    "Move or rename a file, creating destination parent directories if needed.",
     schema = json!({
         "type": "object",
         "properties": {
@@ -153,7 +161,7 @@ fs_tool!(
 fs_tool!(
     CopyFileTool,
     "copy_file",
-    "Copy a file to a new path.",
+    "Copy a file to a new path, creating destination parent directories if needed.",
     schema = json!({
         "type": "object",
         "properties": {

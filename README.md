@@ -124,11 +124,12 @@ agentool = { version = "0.1", features = ["full"] }
 
 **各工具补充语义**
 
-- `read_file`：目标必须是**普通文件**；若提供 `offset`，须 ≥ 1。
+- `read_file`：目标必须是**普通文件**；若提供 `offset`，须 ≥ 1。`offset` 与 `limit` 须为**非负 JSON 整数**（不接受浮点数）。
 - `write_file`：覆盖已存在文件；**自动创建不存在的父目录**。
 - `edit_file`：`old_text` 不得为空；匹配次数为字面量子串匹配（与 `str::match_indices` 计数一致）。
+- `list_directory`：返回条目按 `name` 升序排序，便于调用方做稳定比较与回放。
 - `delete_file`：仅删除**普通文件**；若目标是目录，返回 `INVALID_PATH`（请使用其他流程处理目录删除）。
-- `move_file` / `copy_file`：源必须是普通文件；若目标路径已存在（任意类型），返回 `FILE_ALREADY_EXISTS`。`move_file` 在 `rename` 失败时会尝试「复制 + 删除源」（用于跨卷等场景）。
+- `move_file` / `copy_file`：源必须是普通文件；若目标路径已存在（任意类型），返回 `FILE_ALREADY_EXISTS`；两者都会自动创建目标路径不存在的父目录。`move_file` 在 `rename` 失败时会尝试「复制 + 删除源」（用于跨卷等场景）。
 
 **Rust 示例**
 
@@ -136,15 +137,33 @@ agentool = { version = "0.1", features = ["full"] }
 use std::sync::Arc;
 
 use agentool::Tool;
-use agentool::fs::{FsContext, all_tools};
+use agentool::fs::{all_tools, FsContext};
 
-async fn register_fs_tools() {
+async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
     let ctx = Arc::new(FsContext::new(None, false).expect("workspace root"));
-    for tool in all_tools(ctx) {
-        let _name = tool.name();
-        let _schema = tool.schema();
-        let _ = tool.execute(serde_json::json!({})).await;
-    }
+    let tools = all_tools(ctx);
+
+    let write = tools
+        .iter()
+        .find(|t| t.name() == "write_file")
+        .expect("write_file tool");
+    let read = tools
+        .iter()
+        .find(|t| t.name() == "read_file")
+        .expect("read_file tool");
+
+    write
+        .execute(serde_json::json!({
+            "path": "example.txt",
+            "content": "hello\n",
+        }))
+        .await?;
+
+    let out = read
+        .execute(serde_json::json!({ "path": "example.txt" }))
+        .await?;
+    assert_eq!(out["success"], true);
+    Ok(())
 }
 ```
 
@@ -159,8 +178,8 @@ async fn register_fs_tools() {
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `path` | `string` | 是 | 文件路径 |
-| `offset` | `number` | 否 | 起始行号（从 1 开始，若提供则必须 ≥ 1） |
-| `limit` | `number` | 否 | 读取行数 |
+| `offset` | `integer` | 否 | 起始行号（从 1 开始，若提供则必须 ≥ 1） |
+| `limit` | `integer` | 否 | 读取行数（必须为非负整数） |
 
 **返回**
 
@@ -224,7 +243,7 @@ async fn register_fs_tools() {
 
 #### `list_directory`
 
-列出目录内容。
+列出目录内容；返回条目按 `name` 升序排序。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -259,7 +278,7 @@ async fn register_fs_tools() {
 
 #### `move_file`
 
-移动或重命名普通文件；目标路径已存在时失败。若系统 `rename` 不可用，可能回退为复制后删除源文件。
+移动或重命名普通文件；目标路径已存在时失败。会自动创建目标路径不存在的父目录。若系统 `rename` 不可用，可能回退为复制后删除源文件。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -277,7 +296,7 @@ async fn register_fs_tools() {
 
 #### `copy_file`
 
-复制普通文件；目标路径已存在时失败。
+复制普通文件；目标路径已存在时失败。会自动创建目标路径不存在的父目录。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|

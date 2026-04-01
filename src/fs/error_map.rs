@@ -15,7 +15,11 @@ pub(crate) fn map_io_error(err: std::io::Error, context: &str) -> ToolError {
         ErrorKind::PermissionDenied => ToolErrorCode::PermissionDenied,
         ErrorKind::AlreadyExists => ToolErrorCode::FileAlreadyExists,
         ErrorKind::DirectoryNotEmpty => ToolErrorCode::DirectoryNotEmpty,
-        _ => ToolErrorCode::FileNotFound,
+        ErrorKind::InvalidInput | ErrorKind::InvalidData => ToolErrorCode::InvalidPath,
+        #[cfg(target_os = "windows")]
+        ErrorKind::InvalidFilename => ToolErrorCode::InvalidPath,
+        // Avoid misreporting unrelated I/O failures as FILE_NOT_FOUND; message still carries OS text.
+        _ => ToolErrorCode::InvalidPath,
     };
     let prefix = if context.is_empty() {
         String::new()

@@ -19,7 +19,8 @@ fn json_str<'a>(params: &'a Value, key: &str) -> Result<&'a str, ToolError> {
     })
 }
 
-fn json_u64_opt(params: &Value, key: &str) -> Result<Option<u64>, ToolError> {
+/// Optional non-negative integer only: JSON must be an integer (`u64` / non-negative `i64`), not a float.
+fn json_u64_integer_opt(params: &Value, key: &str) -> Result<Option<u64>, ToolError> {
     let Some(x) = params.get(key) else {
         return Ok(None);
     };
@@ -29,14 +30,14 @@ fn json_u64_opt(params: &Value, key: &str) -> Result<Option<u64>, ToolError> {
     if let Some(n) = x.as_u64() {
         return Ok(Some(n));
     }
-    if let Some(f) = x.as_f64() {
-        if f >= 0.0 && f.is_finite() {
-            return Ok(Some(f as u64));
+    if let Some(n) = x.as_i64() {
+        if n >= 0 {
+            return Ok(Some(n as u64));
         }
     }
     Err(tool_error(
         ToolErrorCode::InvalidPath,
-        format!("`{key}` must be a non-negative number"),
+        format!("`{key}` must be a non-negative JSON integer"),
     ))
 }
 
@@ -74,8 +75,8 @@ fn resolve(ctx: &FsContext, user: &str) -> Result<PathBuf, ToolError> {
 
 pub(crate) fn op_read_file(ctx: &FsContext, params: &Value) -> ToolResult {
     let path = json_str(params, "path")?;
-    let offset = json_u64_opt(params, "offset")?;
-    let limit = json_u64_opt(params, "limit")?;
+    let offset = json_u64_integer_opt(params, "offset")?;
+    let limit = json_u64_integer_opt(params, "limit")?;
     if let Some(0) = offset {
         return Err(tool_error(
             ToolErrorCode::InvalidPath,
@@ -245,6 +246,21 @@ fn ensure_dest_absent(dest: &Path) -> Result<(), ToolError> {
     Ok(())
 }
 
+/// Core rename-or-copy+remove logic, with an injectable rename function for testability.
+///
+/// If `rename_fn` fails (e.g. cross-device), falls back to `fs::copy` + `fs::remove_file`.
+pub(crate) fn move_with_rename_fallback(
+    src: &Path,
+    dst: &Path,
+    rename_fn: impl FnOnce(&Path, &Path) -> std::io::Result<()>,
+) -> Result<(), ToolError> {
+    if rename_fn(src, dst).is_err() {
+        fs::copy(src, dst).map_err(|e| map_io_error(e, "copy"))?;
+        fs::remove_file(src).map_err(|e| map_io_error(e, "remove_file"))?;
+    }
+    Ok(())
+}
+
 pub(crate) fn op_move_file(ctx: &FsContext, params: &Value) -> ToolResult {
     let source = json_str(params, "source")?;
     let destination = json_str(params, "destination")?;
@@ -260,10 +276,7 @@ pub(crate) fn op_move_file(ctx: &FsContext, params: &Value) -> ToolResult {
     if let Some(parent) = dst.parent() {
         fs::create_dir_all(parent).map_err(|e| map_io_error(e, "create_dir_all"))?;
     }
-    if fs::rename(&src, &dst).is_err() {
-        fs::copy(&src, &dst).map_err(|e| map_io_error(e, "copy"))?;
-        fs::remove_file(&src).map_err(|e| map_io_error(e, "remove_file"))?;
-    }
+    move_with_rename_fallback(&src, &dst, |s, d| fs::rename(s, d))?;
     let src_abs = src.canonicalize().unwrap_or(src).display().to_string();
     let dst_abs = dst.canonicalize().unwrap_or(dst).display().to_string();
     Ok(ok_data(json!({
@@ -304,4 +317,58 @@ where
     tokio::task::spawn_blocking(f)
         .await
         .map_err(super::error_map::join_blocking_error)?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn tmp_dir() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "agentool_ops_test_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        fs::create_dir_all(&dir).expect("create tmp dir");
+        dir
+    }
+
+    #[test]
+    fn move_fallback_used_when_rename_fails() {
+        let dir = tmp_dir();
+        let src = dir.join("src.txt");
+        let dst = dir.join("dst.txt");
+        fs::write(&src, b"fallback-content").unwrap();
+
+        move_with_rename_fallback(&src, &dst, |_, _| {
+            Err(std::io::Error::other("forced rename failure"))
+        })
+        .unwrap();
+
+        assert!(
+            !src.exists(),
+            "source should be removed after fallback copy+remove"
+        );
+        assert_eq!(fs::read_to_string(&dst).unwrap(), "fallback-content");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn move_fallback_copy_error_propagates() {
+        let dir = tmp_dir();
+        // source does not exist — copy will fail after rename is rejected
+        let src = dir.join("nonexistent.txt");
+        let dst = dir.join("dst.txt");
+
+        let err =
+            move_with_rename_fallback(&src, &dst, |_, _| Err(std::io::Error::other("forced")))
+                .unwrap_err();
+
+        assert_eq!(err.code.to_string(), "FILE_NOT_FOUND");
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

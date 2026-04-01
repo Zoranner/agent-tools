@@ -179,6 +179,92 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn read_file_rejects_non_integer_offset_or_limit() {
+        let root = tmp_root();
+        let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
+        let tools = all_tools(ctx);
+        let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
+        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        write
+            .execute(json!({ "path": "t.txt", "content": "a\nb\n" }))
+            .await
+            .unwrap();
+
+        for params in [
+            json!({ "path": "t.txt", "offset": 1.0 }),
+            json!({ "path": "t.txt", "limit": 1.5 }),
+        ] {
+            let err = read.execute(params).await.unwrap_err();
+            assert_eq!(err.code.to_string(), "INVALID_PATH");
+        }
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn read_file_schema_uses_integer_contract() {
+        let root = tmp_root();
+        let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
+        let tools = all_tools(ctx);
+        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        let schema = read.schema();
+        assert_eq!(schema["properties"]["offset"]["type"], "integer");
+        assert_eq!(schema["properties"]["offset"]["minimum"], 1);
+        assert_eq!(schema["properties"]["limit"]["type"], "integer");
+        assert_eq!(schema["properties"]["limit"]["minimum"], 0);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
+    async fn list_directory_sorted_entries() {
+        let root = tmp_root();
+        fs::create_dir(root.join("sub")).unwrap();
+        fs::write(root.join("b.txt"), "x").unwrap();
+        fs::write(root.join("a.txt"), "y").unwrap();
+        let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
+        let tools = all_tools(ctx);
+        let list = tools.iter().find(|t| t.name() == "list_directory").unwrap();
+        let out = list.execute(json!({ "path": "." })).await.unwrap();
+        assert_eq!(out["success"], true);
+        let entries = out["data"]["entries"].as_array().unwrap();
+        let names: Vec<_> = entries
+            .iter()
+            .map(|e| e["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(names, vec!["a.txt", "b.txt", "sub"]);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
+    async fn move_file_to_nested_destination() {
+        let root = tmp_root();
+        let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
+        let tools = all_tools(ctx);
+        let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
+        let mv = tools.iter().find(|t| t.name() == "move_file").unwrap();
+        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        write
+            .execute(json!({ "path": "src.txt", "content": "moved" }))
+            .await
+            .unwrap();
+        let out = mv
+            .execute(json!({
+                "source": "src.txt",
+                "destination": "nested/dst.txt"
+            }))
+            .await
+            .unwrap();
+        assert_eq!(out["success"], true);
+        assert!(!root.join("src.txt").exists());
+        let r = read
+            .execute(json!({ "path": "nested/dst.txt" }))
+            .await
+            .unwrap();
+        assert_eq!(r["data"]["content"], "moved");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
     async fn sandbox_blocks_escape() {
         let root = tmp_root();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
