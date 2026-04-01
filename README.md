@@ -124,12 +124,12 @@ agentool = { version = "0.1", features = ["full"] }
 
 **各工具补充语义**
 
-- `read_file`：目标必须是**普通文件**；若提供 `offset`，须 ≥ 1。`offset` 与 `limit` 须为**非负 JSON 整数**（不接受浮点数）。
+- `read_file`：目标必须是**普通文件**；若提供 `offset`，须 ≥ 1。`offset` 与 `limit` 须为**非负 JSON 整数**（不接受浮点数）。返回内容**保留原始换行符**（CRLF 不被归一化为 LF），也保留文件末尾换行；`total_lines` 为逻辑行数（与 `str::lines` 计数一致）。
 - `write_file`：覆盖已存在文件；**自动创建不存在的父目录**。
 - `edit_file`：`old_text` 不得为空；匹配次数为字面量子串匹配（与 `str::match_indices` 计数一致）。
 - `list_directory`：返回条目按 `name` 升序排序，便于调用方做稳定比较与回放。
 - `delete_file`：仅删除**普通文件**；若目标是目录，返回 `INVALID_PATH`（请使用其他流程处理目录删除）。
-- `move_file` / `copy_file`：源必须是普通文件；若目标路径已存在（任意类型），返回 `FILE_ALREADY_EXISTS`；两者都会自动创建目标路径不存在的父目录。`move_file` 在 `rename` 失败时会尝试「复制 + 删除源」（用于跨卷等场景）。
+- `move_file` / `copy_file`：源必须是普通文件；若目标路径已存在（任意类型），返回 `FILE_ALREADY_EXISTS`；两者都会自动创建目标路径不存在的父目录。`move_file` 在 `rename` 失败时会尝试「复制 + 删除源」（用于跨卷等场景）；若删除源失败，会 best-effort 清除已创建的目标副本，再返回错误，以避免留下无主文件。
 
 **Rust 示例**
 
@@ -185,8 +185,8 @@ async fn example_fs_write_and_read() -> Result<(), agentool::ToolError> {
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `content` | `string` | 文件内容 |
-| `total_lines` | `number` | 文件总行数 |
+| `content` | `string` | 文件内容（保留原始换行符，含末尾换行） |
+| `total_lines` | `number` | 文件逻辑行数 |
 
 ---
 

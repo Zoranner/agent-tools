@@ -265,6 +265,51 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn read_file_preserves_crlf_and_trailing_newline() {
+        let root = tmp_root();
+        // Write CRLF content at the byte level — bypassing write_file so the \r\n is verbatim.
+        std::fs::write(root.join("crlf.txt"), b"line1\r\nline2\r\n").unwrap();
+        let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
+        let tools = all_tools(ctx);
+        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+
+        // Full read: CRLF must survive and trailing newline must be present.
+        let r = read
+            .execute(serde_json::json!({ "path": "crlf.txt" }))
+            .await
+            .unwrap();
+        assert_eq!(r["data"]["content"], "line1\r\nline2\r\n");
+        assert_eq!(r["data"]["total_lines"], 2);
+
+        // Partial read (offset=1, limit=1): CRLF on the selected line is preserved.
+        let r2 = read
+            .execute(serde_json::json!({ "path": "crlf.txt", "offset": 1, "limit": 1 }))
+            .await
+            .unwrap();
+        assert_eq!(r2["data"]["content"], "line1\r");
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
+    async fn read_file_preserves_trailing_newline_lf() {
+        let root = tmp_root();
+        std::fs::write(root.join("t.txt"), b"hello\nworld\n").unwrap();
+        let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
+        let tools = all_tools(ctx);
+        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+
+        let r = read
+            .execute(serde_json::json!({ "path": "t.txt" }))
+            .await
+            .unwrap();
+        assert_eq!(r["data"]["content"], "hello\nworld\n");
+        assert_eq!(r["data"]["total_lines"], 2);
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
     async fn sandbox_blocks_escape() {
         let root = tmp_root();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));

@@ -91,21 +91,28 @@ pub(crate) fn op_read_file(ctx: &FsContext, params: &Value) -> ToolResult {
         ));
     }
     let text = fs::read_to_string(&resolved).map_err(|e| map_io_error(e, "read_file"))?;
-    let lines: Vec<&str> = text.lines().collect();
-    let total_lines = lines.len() as u64;
+    let total_lines = text.lines().count() as u64;
+    // Split on '\n' rather than `.lines()` so that '\r' in CRLF content is
+    // kept on each segment and the trailing empty segment after a final '\n'
+    // is preserved; recombining with join("\n") reconstructs the original text.
+    let segments: Vec<&str> = text.split('\n').collect();
     let start = offset
         .map(|o| (o - 1) as usize)
         .unwrap_or(0)
-        .min(lines.len());
+        .min(segments.len());
     let content = if let Some(lim) = limit {
-        lines
+        segments
             .into_iter()
             .skip(start)
             .take(lim as usize)
             .collect::<Vec<_>>()
             .join("\n")
     } else {
-        lines.into_iter().skip(start).collect::<Vec<_>>().join("\n")
+        segments
+            .into_iter()
+            .skip(start)
+            .collect::<Vec<_>>()
+            .join("\n")
     };
     Ok(ok_data(json!({
         "content": content,
@@ -249,6 +256,8 @@ fn ensure_dest_absent(dest: &Path) -> Result<(), ToolError> {
 /// Core rename-or-copy+remove logic, with an injectable rename function for testability.
 ///
 /// If `rename_fn` fails (e.g. cross-device), falls back to `fs::copy` + `fs::remove_file`.
+/// If the removal of the source fails after a successful copy, the destination copy is
+/// removed on a best-effort basis so as not to leave a stale file behind.
 pub(crate) fn move_with_rename_fallback(
     src: &Path,
     dst: &Path,
@@ -256,7 +265,10 @@ pub(crate) fn move_with_rename_fallback(
 ) -> Result<(), ToolError> {
     if rename_fn(src, dst).is_err() {
         fs::copy(src, dst).map_err(|e| map_io_error(e, "copy"))?;
-        fs::remove_file(src).map_err(|e| map_io_error(e, "remove_file"))?;
+        if let Err(e) = fs::remove_file(src) {
+            let _ = fs::remove_file(dst);
+            return Err(map_io_error(e, "remove_file"));
+        }
     }
     Ok(())
 }
