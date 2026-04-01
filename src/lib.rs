@@ -6,11 +6,6 @@ pub use tool::Tool;
 
 pub type ToolResult = Result<serde_json::Value, ToolError>;
 
-/// 兼容旧路径 `agentool::core::*`（原独立 crate 重导出）。
-pub mod core {
-    pub use crate::{Tool, ToolError, ToolErrorCode, ToolResult};
-}
-
 #[cfg(feature = "fs")]
 pub mod fs;
 
