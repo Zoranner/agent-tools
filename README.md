@@ -106,18 +106,60 @@ agentool = { version = "0.1", features = ["full"] }
 
 ---
 
+### `Tool::execute` 与 JSON 外壳
+
+库内 `Tool::execute` 的返回类型为 `Result<serde_json::Value, ToolError>`。**成功**时，`Ok` 中的 JSON 已包含上文约定的 `success` / `data` 外壳；**失败**时为 `Err(ToolError)`，由宿主/runtime 映射为 `success: false` 与 `error` 对象（字段与错误码表一致）。
+
+### 文件系统路径与安全（`fs`）
+
+使用 `agentool::fs::FsContext` 为全部 `fs` 工具提供共享配置：
+
+| 项 | 说明 |
+|----|------|
+| 工作区根 | `FsContext::new(root, allow_outside_root)` 中 `root` 为 `None` 时，取进程当前工作目录并规范化为绝对路径；否则使用给定目录作为根 |
+| `allow_outside_root == false`（默认） | 沙箱模式：解析后的路径必须落在工作区根之下（含边界），否则 `INVALID_PATH` |
+| `allow_outside_root == true` | 放宽模式：相对路径相对进程当前工作目录解析，不做「必须在根下」的校验 |
+
+路径会先进行 `.` / `..` 的语法归一化。沙箱模式下，若传入绝对路径且落在根外，同样返回 `INVALID_PATH`。
+
+**各工具补充语义**
+
+- `read_file`：目标必须是**普通文件**；若提供 `offset`，须 ≥ 1。
+- `write_file`：覆盖已存在文件；**自动创建不存在的父目录**。
+- `edit_file`：`old_text` 不得为空；匹配次数为字面量子串匹配（与 `str::match_indices` 计数一致）。
+- `delete_file`：仅删除**普通文件**；若目标是目录，返回 `INVALID_PATH`（请使用其他流程处理目录删除）。
+- `move_file` / `copy_file`：源必须是普通文件；若目标路径已存在（任意类型），返回 `FILE_ALREADY_EXISTS`。`move_file` 在 `rename` 失败时会尝试「复制 + 删除源」（用于跨卷等场景）。
+
+**Rust 示例**
+
+```rust
+use std::sync::Arc;
+
+use agentool::Tool;
+use agentool::fs::{FsContext, all_tools};
+
+async fn register_fs_tools() {
+    let ctx = Arc::new(FsContext::new(None, false).expect("workspace root"));
+    for tool in all_tools(ctx) {
+        let _name = tool.name();
+        let _schema = tool.schema();
+        let _ = tool.execute(serde_json::json!({})).await;
+    }
+}
+```
+
 ## 工具列表
 
 ### 文件系统
 
 #### `read_file`
 
-读取文件内容。
+读取文件内容（仅普通文件）。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `path` | `string` | 是 | 文件路径 |
-| `offset` | `number` | 否 | 起始行号（从 1 开始） |
+| `offset` | `number` | 否 | 起始行号（从 1 开始，若提供则必须 ≥ 1） |
 | `limit` | `number` | 否 | 读取行数 |
 
 **返回**
@@ -131,7 +173,7 @@ agentool = { version = "0.1", features = ["full"] }
 
 #### `write_file`
 
-写入文件，文件不存在时自动创建。
+写入文件；文件不存在时创建，**并递归创建不存在的父目录**；已存在则覆盖。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -148,7 +190,7 @@ agentool = { version = "0.1", features = ["full"] }
 
 #### `edit_file`
 
-精确替换文件中的某段文本，要求 `old_text` 在文件中唯一。
+精确替换文件中的某段文本，要求 `old_text` 在文件中唯一；`old_text` 不得为空字符串。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -201,7 +243,7 @@ agentool = { version = "0.1", features = ["full"] }
 
 #### `delete_file`
 
-删除文件。
+删除**普通文件**（非目录）。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -217,7 +259,7 @@ agentool = { version = "0.1", features = ["full"] }
 
 #### `move_file`
 
-移动或重命名文件。
+移动或重命名普通文件；目标路径已存在时失败。若系统 `rename` 不可用，可能回退为复制后删除源文件。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -235,7 +277,7 @@ agentool = { version = "0.1", features = ["full"] }
 
 #### `copy_file`
 
-复制文件。
+复制普通文件；目标路径已存在时失败。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
