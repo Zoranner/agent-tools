@@ -1,6 +1,6 @@
 # Agent Tools
 
-面向 AI 智能体的 Rust 工具库，为 LLM 驱动的应用提供文件系统操作、工作区查找、网络获取、文档分析、版本控制、跨会话记忆与可插拔人机交互能力。每个工具通过 JSON Schema 描述，与 OpenAI Function Calling / Anthropic Tool Use 等主流格式直接兼容。
+面向 AI 智能体的 Rust 工具库，为 LLM 驱动的应用提供文件系统操作、工作区查找、网络获取、文档分析、版本控制、跨会话记忆、可插拔人机交互与工作区待办持久化能力。每个工具通过 JSON Schema 描述，与 OpenAI Function Calling / Anthropic Tool Use 等主流格式直接兼容。
 
 ## 快速开始
 
@@ -54,9 +54,10 @@ async fn example() -> Result<(), agentool::ToolError> {
 | `git` | `git_status` / `git_diff` / `git_commit` / `git_log` |
 | `memory` | `memory_write` / `memory_update` / `memory_read` / `memory_search` |
 | `interact` | `ask` / `confirm` / `notify` |
+| `todo` | `todo_add` / `todo_list` / `todo_update` / `todo_remove` |
 | `full` | 全部已发布模块 |
 
-> `exec` / `code` / `office` / `browser` / `design` / `gui` / `todo` 等模块尚在规划中，暂未发布。
+> `exec` / `code` / `office` / `browser` / `design` / `gui` 等模块尚在规划中，暂未发布。
 
 ## 工具参考
 
@@ -71,6 +72,7 @@ async fn example() -> Result<(), agentool::ToolError> {
 | `git` | [src/git/README.md](src/git/README.md) |
 | `memory` | [src/memory/README.md](src/memory/README.md) |
 | `interact` | [src/interact/README.md](src/interact/README.md) |
+| `todo` | [src/todo/README.md](src/todo/README.md) |
 
 规划中模块的占位说明见同目录 `README.md`（如 [src/exec/README.md](src/exec/README.md)）。
 

@@ -10,6 +10,7 @@
     feature = "md",
     feature = "git",
     feature = "memory",
+    feature = "todo",
 ))]
 pub(crate) mod blocking;
 pub(crate) mod json;
@@ -19,6 +20,7 @@ pub(crate) mod json;
     feature = "md",
     feature = "git",
     feature = "find",
-    feature = "memory"
+    feature = "memory",
+    feature = "todo",
 ))]
 pub(crate) mod path;
