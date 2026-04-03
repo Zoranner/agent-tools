@@ -54,12 +54,10 @@ fn resolve(ctx: &FsContext, user: &str) -> Result<PathBuf, ToolError> {
         return Err(tool_error(ToolErrorCode::InvalidPath, "path is empty"));
     }
     let user_path = Path::new(s);
-    let base = if ctx.allow_outside_root {
-        std::env::current_dir().map_err(|e| map_io_error(e, "cwd"))?
-    } else {
-        ctx.root_canonical.clone()
-    };
-    let logical = combine_and_normalize(&base, user_path);
+    // Relative paths always join against `root_canonical` (same as sandbox). Sandbox mode then
+    // enforces the result stays under root; relaxed mode skips that check so absolute targets and
+    // lexically-normalized paths outside root are allowed.
+    let logical = combine_and_normalize(&ctx.root_canonical, user_path);
 
     if ctx.allow_outside_root {
         if logical.exists() {

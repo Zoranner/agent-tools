@@ -68,10 +68,10 @@ async fn example() -> Result<(), agentool::ToolError> {
 >
 > | 模式 | 说明 |
 > |------|------|
-> | `FsContext::new(root, false)`（默认） | **沙箱模式**：路径解析后必须落在工作区根下（含根本身），否则返回 `INVALID_PATH` |
-> | `FsContext::new(root, true)` | **放宽模式**：相对路径基于进程当前目录解析，不做范围限制 |
+> | `FsContext::new(root, false)`（默认） | **沙箱模式**：相对路径相对于工作区根拼接；解析后的真实路径必须落在该根下（含根本身），否则返回 `INVALID_PATH` |
+> | `FsContext::new(root, true)` | **放宽模式**：相对路径同样相对于工作区根拼接，与沙箱一致；**不**校验解析结果是否仍在根内，因此绝对路径或经 `..` 归一化后的路径可以落在根外 |
 >
-> `root` 为 `None` 时取进程当前目录。路径传入前先做 `.` / `..` 语法归一化；绝对路径若落在根外同样被拒绝。
+> `root` 为 `None` 时在构造 `FsContext` 的瞬间取进程当前目录并 canonicalize 作为工作区根。路径在解析前会做 `.` / `..` 词法归一化。
 
 ---
 

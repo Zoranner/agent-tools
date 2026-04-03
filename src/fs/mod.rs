@@ -1,7 +1,9 @@
 //! File-system tools: read/write/edit files and directories with optional sandbox.
 //!
-//! Use [`FsContext`] to set the workspace root (canonical). When [`FsContext::allow_outside_root`]
-//! is `false`, all resolved paths must stay under that root.
+//! Use [`FsContext`] to set the workspace root (canonical). Relative paths are always resolved
+//! against that root. When [`FsContext::allow_outside_root`] is `false`, every resolved path must
+//! stay under the root; when `true`, that check is omitted (absolute paths and `..` normalization
+//! may therefore leave the workspace).
 
 mod error_map;
 mod ops;
@@ -18,9 +20,10 @@ pub use tools::{
 /// Shared settings for fs tools: canonical workspace root and sandbox mode.
 #[derive(Debug, Clone)]
 pub struct FsContext {
-    /// Canonical workspace root enforced when [`Self::allow_outside_root`] is `false`.
+    /// Canonical workspace root: relative paths join against this directory.
     pub root_canonical: PathBuf,
-    /// When `true`, paths resolve from the process current directory without sandbox checks.
+    /// When `false`, resolved paths must remain under [`Self::root_canonical`]. When `true`, that
+    /// boundary check is skipped (absolute paths and normalized paths may lie outside the root).
     pub allow_outside_root: bool,
 }
 
@@ -326,5 +329,67 @@ mod tests {
         assert_eq!(err.code.to_string(), "INVALID_PATH");
         let _ = fs::remove_file(&sibling);
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[tokio::test]
+    async fn relaxed_mode_allows_absolute_path_outside_workspace_root() {
+        let base = tmp_root();
+        let workspace = base.join("workspace");
+        let outside = base.join("outside");
+        fs::create_dir_all(&workspace).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        let secret = outside.join("secret.txt");
+        fs::write(&secret, "outside-data").unwrap();
+        let secret_abs = secret.canonicalize().unwrap();
+        let path_arg = secret_abs.to_string_lossy().to_string();
+
+        let ctx_sandbox = Arc::new(FsContext::new(Some(workspace.clone()), false).unwrap());
+        let tools_sandbox = all_tools(ctx_sandbox);
+        let read = tools_sandbox
+            .iter()
+            .find(|t| t.name() == "read_file")
+            .unwrap();
+        let err = read
+            .execute(json!({ "path": path_arg.clone() }))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code.to_string(), "INVALID_PATH");
+
+        let ctx_relaxed = Arc::new(FsContext::new(Some(workspace.clone()), true).unwrap());
+        let tools_relaxed = all_tools(ctx_relaxed);
+        let read_r = tools_relaxed
+            .iter()
+            .find(|t| t.name() == "read_file")
+            .unwrap();
+        let r = read_r.execute(json!({ "path": path_arg })).await.unwrap();
+        assert_eq!(r["data"]["content"], "outside-data");
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[tokio::test]
+    async fn relaxed_mode_relative_path_joins_workspace_root() {
+        let base = tmp_root();
+        let workspace = base.join("ws");
+        fs::create_dir_all(&workspace).unwrap();
+        let ctx = Arc::new(FsContext::new(Some(workspace.clone()), true).unwrap());
+        let tools = all_tools(ctx);
+        let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
+        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        write
+            .execute(json!({
+                "path": "nested/relaxed.txt",
+                "content": "in-ws"
+            }))
+            .await
+            .unwrap();
+        let on_disk = workspace.join("nested").join("relaxed.txt");
+        assert!(on_disk.is_file());
+        let r = read
+            .execute(json!({ "path": "nested/relaxed.txt" }))
+            .await
+            .unwrap();
+        assert_eq!(r["data"]["content"], "in-ws");
+        let _ = fs::remove_dir_all(&base);
     }
 }
