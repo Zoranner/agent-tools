@@ -1,17 +1,19 @@
-# 网络（`web`）
+# Web (`web`)
 
-[← 返回仓库说明](../../README.md)
+[中文](README.zh.md) | English
 
-实现源码：[mod.rs](mod.rs)、[backend.rs](backend.rs)、[types.rs](types.rs)、[backends/](backends/)、[ops.rs](ops.rs)、[tools.rs](tools.rs)
+[← Back to repository overview](../../README.md)
 
-**`WebContext` 与可插拔后端**
+Sources: [mod.rs](mod.rs), [backend.rs](backend.rs), [types.rs](types.rs), [backends/](backends/), [ops.rs](ops.rs), [tools.rs](tools.rs)
 
-- `WebContext::new()?`：默认 `reqwest::Client`（约 30s 超时、15s 连接超时、最多 8 次重定向、`agentool` User-Agent）+ [`DuckDuckGoSearchBackend`](backends/duckduckgo.rs) + [`DirectFetchBackend`](backends/direct_fetch.rs)。
-- `WebContext::with_client(client)`：只换 HTTP 客户端，后端仍为默认。
-- `WebContextBuilder`：`.client(...)`、`.search(...)` / `.search_backend(Arc<dyn WebSearchBackend>)`、`.fetch(...)` / `.fetch_backend(Arc<dyn WebFetchBackend>)` 任意组合；`WebContext::from_parts(client, search, fetch)` 亦可一次传入。
-- 实现 [`WebSearchBackend`](backend.rs) / [`WebFetchBackend`](backend.rs)，返回 [`WebSearchResult`](types.rs) / [`WebFetchResult`](types.rs)，错误统一为 [`ToolError`](../error.rs)（多为 `NETWORK_ERROR`）。
+**`WebContext` and pluggable backends**
 
-自定义搜索示例（实现 trait 后用 `WebContextBuilder::new().search(MySearch).build()?`）：
+- `WebContext::new()?`: default `reqwest::Client` (~30s timeout, 15s connect, up to 8 redirects, `agentool` User-Agent) + [`DuckDuckGoSearchBackend`](backends/duckduckgo.rs) + [`DirectFetchBackend`](backends/direct_fetch.rs).
+- `WebContext::with_client(client)`: swap the HTTP client only; backends stay default.
+- `WebContextBuilder`: combine `.client(...)`, `.search(...)` / `.search_backend(Arc<dyn WebSearchBackend>)`, `.fetch(...)` / `.fetch_backend(Arc<dyn WebFetchBackend>)`; or `WebContext::from_parts(client, search, fetch)`.
+- Implement [`WebSearchBackend`](backend.rs) / [`WebFetchBackend`](backend.rs) returning [`WebSearchResult`](types.rs) / [`WebFetchResult`](types.rs); errors are [`ToolError`](../tool.rs) (often `NETWORK_ERROR`).
+
+Custom search example:
 
 ```rust
 use std::sync::Arc;
@@ -30,7 +32,7 @@ impl WebSearchBackend for MySearch {
         query: &str,
         limit: usize,
     ) -> Result<Vec<WebSearchResult>, ToolError> {
-        // 调用 Brave / Tavily / 自建 SearXNG 等
+        // Brave / Tavily / self-hosted SearXNG, etc.
         let _ = (query, limit);
         Ok(vec![])
     }
@@ -40,56 +42,56 @@ let ctx = Arc::new(WebContextBuilder::new().search(MySearch).build()?);
 let _tools = all_tools(ctx);
 ```
 
-**默认搜索（DuckDuckGo）**
+**Default search (DuckDuckGo)**
 
-`DuckDuckGoSearchBackend`：Instant Answer JSON；不足时 POST HTML 结果页并解析 `result__a`（含 `uddg=` 解码）。页面结构可能变更，生产环境建议换付费 API 或自建索引。
+`DuckDuckGoSearchBackend`: Instant Answer JSON; falls back to HTML parsing (`result__a`, `uddg=` decoding). Page layout may change—use a paid API or your own index in production.
 
-**默认抓取（直连 + htmd）**
+**Default fetch (direct + htmd)**
 
-`DirectFetchBackend`：`web_fetch` 侧仅允许 `http` / `https`（在 `ops` 中校验）；下载 HTML 后经 `htmd` 转 Markdown。可换为调用 Jina Reader、无头浏览器等自定义 [`WebFetchBackend`](backend.rs)。
+`DirectFetchBackend`: `web_fetch` allows only `http` / `https` (checked in `ops`); HTML is converted to Markdown with `htmd`. Swap in Jina Reader, headless browser, etc. via a custom [`WebFetchBackend`](backend.rs).
 
 ## `web_search`
 
-搜索网络，返回相关资料摘要。
+Search the web; returns snippets.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `query` | `string` | 是 | 搜索关键词 |
-| `limit` | `number` | 否 | 返回结果数量，默认 5 |
+| Parameter | Type | Required | Notes |
+|-----------|------|----------|--------|
+| `query` | `string` | yes | Query string |
+| `limit` | `number` | no | Default 5 |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `results` | `Result[]` | 搜索结果列表 |
-| `results[].title` | `string` | 页面标题 |
-| `results[].url` | `string` | 页面 URL |
-| `results[].snippet` | `string` | 内容摘要 |
+| Field | Type |
+|-------|------|
+| `results` | `Result[]` |
+| `results[].title` | `string` |
+| `results[].url` | `string` |
+| `results[].snippet` | `string` |
 
 ---
 
 ## `web_fetch`
 
-抓取指定网页并转换为 Markdown。
+Fetch a URL and convert HTML to Markdown.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `url` | `string` | 是 | 网页 URL |
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `url` | `string` | yes |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `content` | `string` | 转换后的 Markdown 内容 |
-| `title` | `string` | 页面标题 |
-| `url` | `string` | 实际访问的 URL（含重定向） |
+| Field | Type |
+|-------|------|
+| `content` | `string` |
+| `title` | `string` |
+| `url` | `string` | Final URL after redirects |
 
-## 错误码
+## Error codes
 
-- 字符串必填项缺失/类型错误：[`core/json.rs`](../core/json.rs) → `INVALID_PATH`  
-- 网络与 `limit` 校验：[`error.rs`](error.rs) 中 `WebErrorCode` → `NETWORK_ERROR`
+- Missing/invalid string args: [`core/json.rs`](../core/json.rs) → `INVALID_PATH`
+- Network / `limit`: [`error.rs`](error.rs) `WebErrorCode` → `NETWORK_ERROR`
 
-| 错误码 | 说明 |
-|--------|------|
-| `INVALID_PATH` | 缺少或类型不对的 `query` / `url` 等字符串参数 |
-| `NETWORK_ERROR` | `limit` 非法、搜索/抓取失败、HTTP 非成功、仅允许 http(s) 等 |
+| Code | Meaning |
+|------|---------|
+| `INVALID_PATH` | Bad `query` / `url` type or missing required string |
+| `NETWORK_ERROR` | Bad `limit`, fetch/search failure, non-success HTTP, non-http(s) URL, etc. |

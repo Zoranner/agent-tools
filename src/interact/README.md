@@ -1,68 +1,70 @@
-# 交互（`interact`）
+# Interact (`interact`)
 
-[← 返回仓库说明](../../README.md)
+[中文](README.zh.md) | English
 
-实现源码：[mod.rs](mod.rs)
+[← Back to repository overview](../../README.md)
 
-实际提问、确认、通知的 I/O 由宿主注入 [`InteractBackend`](mod.rs)（终端、桌面、LSP、MCP 等）。[`InteractContext::new`](mod.rs) 传入 `Arc<dyn InteractBackend>`；若暂时不接宿主，可用 [`InteractContext::unsupported`](mod.rs)（`interact_ask` / `interact_confirm` 会报错，`interact_notify` 返回 `sent: false`）。单元测试可使用 [`StubInteractBackend`](backends/mod.rs)。
+Sources: [mod.rs](mod.rs)
+
+Ask / confirm / notify I/O is provided by an injected [`InteractBackend`](mod.rs) (terminal, desktop, LSP, MCP, …). [`InteractContext::new`](mod.rs) takes `Arc<dyn InteractBackend>`. For hosts without wiring, [`InteractContext::unsupported`](mod.rs) makes `interact_ask` / `interact_confirm` error and `interact_notify` return `sent: false`. Tests can use [`StubInteractBackend`](backends/mod.rs).
 
 ## `interact_ask`
 
-向用户提问，等待并返回回答。
+Ask the user and wait for an answer.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `question` | `string` | 是 | 问题内容 |
-| `options` | `string[]` | 否 | 非空时为单选；缺省或空数组为自由回答 |
-| `timeout` | `number` | 否 | 超时秒数，由后端解释并实现 |
+| Parameter | Type | Required | Notes |
+|-----------|------|----------|--------|
+| `question` | `string` | yes | Prompt |
+| `options` | `string[]` | no | Non-empty → single choice; empty/absent → free text |
+| `timeout` | `number` | no | Seconds; interpreted by backend |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `answer` | `string` | 回答内容 |
+| Field | Type |
+|-------|------|
+| `answer` | `string` |
 
 ---
 
 ## `interact_confirm`
 
-向用户请求确认，等待是/否结果。
+Ask for yes/no.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `message` | `string` | 是 | 确认提示内容 |
-| `default` | `boolean` | 否 | 超时或无响应时的默认值，默认 `false` |
-| `timeout` | `number` | 否 | 超时秒数 |
+| Parameter | Type | Required | Notes |
+|-----------|------|----------|--------|
+| `message` | `string` | yes | Prompt |
+| `default` | `boolean` | no | On timeout/no response; default `false` |
+| `timeout` | `number` | no | Seconds |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `confirmed` | `boolean` | 是否确认 |
+| Field | Type |
+|-------|------|
+| `confirmed` | `boolean` |
 
 ---
 
 ## `interact_notify`
 
-向用户发送通知，无需等待回复。
+Fire-and-forget notification.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `message` | `string` | 是 | 通知内容 |
-| `level` | `"info" \| "warning" \| "error"` | 否 | 通知级别，默认 `"info"` |
+| Parameter | Type | Required | Notes |
+|-----------|------|----------|--------|
+| `message` | `string` | yes | Body |
+| `level` | `"info" \| "warning" \| "error"` | no | Default `"info"` |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `sent` | `boolean` | 后端是否报告发送成功（无后端时多为 `false`） |
+| Field | Type |
+|-------|------|
+| `sent` | `boolean` | Backend-reported success (often `false` with no backend) |
 
-## 错误码
+## Error codes
 
-| 错误码 | 说明 |
-|--------|------|
-| `INVALID_PATH` | 必填字符串参数缺失或类型错误（见库内 `core::json`） |
-| `INTERACT_NOT_SUPPORTED` | 当前上下文未配置可用的 `InteractBackend`（默认 `unsupported` 下 `interact_ask` / `interact_confirm`） |
-| `INTERACT_TIMEOUT` | 自定义后端在超时时可直接构造 `ToolError`，`code` 为该字符串 |
-| `INTERACT_CANCELLED` | 用户取消等，同上，`code` 为该字符串 |
-| `INTERACT_INVALID_PARAM` | 如 `level` 非法枚举值 |
+| Code | Meaning |
+|------|---------|
+| `INVALID_PATH` | Missing/invalid string args (`core::json`) |
+| `INTERACT_NOT_SUPPORTED` | No usable backend (`unsupported` for ask/confirm) |
+| `INTERACT_TIMEOUT` | Custom backends may use this `ToolError.code` |
+| `INTERACT_CANCELLED` | User cancelled; same pattern |
+| `INTERACT_INVALID_PARAM` | e.g. invalid `level` |

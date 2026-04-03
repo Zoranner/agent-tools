@@ -1,173 +1,175 @@
-# 文件系统（`fs`）
+# Filesystem (`fs`)
 
-[← 返回仓库说明](../../README.md)
+[中文](README.zh.md) | English
 
-> **路径与沙箱**
+[← Back to repository overview](../../README.md)
+
+> **Paths and sandboxing**
 >
-> 所有 `fs` 工具共享同一个 `FsContext`：
+> All `fs` tools share one `FsContext`:
 >
-> | 模式 | 说明 |
-> |------|------|
-> | `FsContext::new(root, false)`（默认） | **沙箱模式**：相对路径相对于工作区根拼接；解析后的真实路径必须落在该根下（含根本身），否则返回 `INVALID_PATH` |
-> | `FsContext::new(root, true)` | **放宽模式**：相对路径同样相对于工作区根拼接，与沙箱一致；**不**校验解析结果是否仍在根内，因此绝对路径或经 `..` 归一化后的路径可以落在根外 |
+> | Mode | Behavior |
+> |------|----------|
+> | `FsContext::new(root, false)` (default) | **Sandbox**: relative paths join to the workspace root; the resolved path must stay under that root (including the root itself) or `INVALID_PATH` is returned |
+> | `FsContext::new(root, true)` | **Relaxed**: relative paths still join to the workspace root like sandbox mode; **no** check that the result stays inside the root, so absolute paths or normalized `..` may escape |
 >
-> `root` 为 `None` 时在构造 `FsContext` 的瞬间取进程当前目录并 canonicalize 作为工作区根。路径在解析前会做 `.` / `..` 词法归一化。
+> If `root` is `None`, the process current directory is canonicalized at construction time. Paths are lexically normalized for `.` / `..` before resolution.
 
 ---
 
 ## `read_file`
 
-读取文本文件内容，支持按行分页。
+Read a text file with optional line-based paging.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | `string` | 是 | 文件路径（须为普通文件） |
-| `offset` | `integer` | 否 | 起始行号（从 1 开始，须 ≥ 1） |
-| `limit` | `integer` | 否 | 读取行数上限（须为非负整数） |
+| Parameter | Type | Required | Notes |
+|-----------|------|----------|--------|
+| `path` | `string` | yes | Must be a regular file |
+| `offset` | `integer` | no | Start line (1-based, ≥ 1) |
+| `limit` | `integer` | no | Max lines (non-negative integer) |
 
-`offset` 和 `limit` 只接受 JSON 整数，不接受浮点数。
+`offset` and `limit` must be JSON integers, not floats.
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `content` | `string` | 文件内容，保留原始换行符（CRLF 不归一化）及末尾换行 |
-| `total_lines` | `number` | 文件逻辑行数 |
+| Field | Type | Notes |
+|-------|------|--------|
+| `content` | `string` | Raw newlines preserved (CRLF not normalized) |
+| `total_lines` | `number` | Logical line count |
 
 ---
 
 ## `write_file`
 
-写入文件；文件不存在时创建，已存在则覆盖。自动递归创建不存在的父目录。
+Write a file; create if missing, overwrite if present. Missing parent directories are created.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | `string` | 是 | 文件路径 |
-| `content` | `string` | 是 | 写入内容 |
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `path` | `string` | yes |
+| `content` | `string` | yes |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `path` | `string` | 文件的绝对路径 |
+| Field | Type |
+|-------|------|
+| `path` | `string` | Absolute path of the file |
 
 ---
 
 ## `edit_file`
 
-精确替换文件中的某段文本。`old_text` 必须在文件中**唯一**出现，且不得为空字符串。
+Replace one occurrence of `old_text`. It must be **unique** in the file and must not be empty.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | `string` | 是 | 文件路径 |
-| `old_text` | `string` | 是 | 待替换的原始文本（须唯一） |
-| `new_text` | `string` | 是 | 替换后的新文本 |
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `path` | `string` | yes |
+| `old_text` | `string` | yes |
+| `new_text` | `string` | yes |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `path` | `string` | 文件的绝对路径 |
+| Field | Type |
+|-------|------|
+| `path` | `string` | Absolute path of the file |
 
 ---
 
 ## `create_directory`
 
-创建目录，支持递归创建多级目录。目录已存在时不报错。
+Create a directory (recursive). No error if it already exists.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | `string` | 是 | 目录路径 |
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `path` | `string` | yes |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `path` | `string` | 目录的绝对路径 |
+| Field | Type |
+|-------|------|
+| `path` | `string` | Absolute path of the directory |
 
 ---
 
 ## `list_directory`
 
-列出目录中的文件和子目录，结果按名称升序排序。
+List files and subdirectories, sorted by name ascending.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | `string` | 是 | 目录路径 |
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `path` | `string` | yes |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `entries` | `Entry[]` | 条目列表（按 `name` 升序） |
-| `entries[].name` | `string` | 文件或目录名 |
-| `entries[].type` | `"file" \| "directory"` | 类型 |
-| `entries[].size` | `number` | 文件大小（字节），目录为 0 |
+| Field | Type |
+|-------|------|
+| `entries` | `Entry[]` |
+| `entries[].name` | `string` |
+| `entries[].type` | `"file" \| "directory"` |
+| `entries[].size` | `number` | Bytes; 0 for directories |
 
 ---
 
 ## `delete_file`
 
-删除普通文件。若目标是目录，返回 `INVALID_PATH`。
+Delete a regular file. If the path is a directory, returns `INVALID_PATH`.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `path` | `string` | 是 | 文件路径 |
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `path` | `string` | yes |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `path` | `string` | 被删除文件的绝对路径 |
+| Field | Type |
+|-------|------|
+| `path` | `string` | Absolute path of the removed file |
 
 ---
 
 ## `move_file`
 
-移动或重命名普通文件。目标路径已存在时失败，自动创建目标路径的父目录。
+Move or rename a file. Fails if the destination exists; creates parent dirs as needed.
 
-跨卷移动时会自动回退为「复制 + 删除源」；若删除源失败，会尝试清除已创建的目标副本后返回错误，不留无主文件。
+Cross-volume moves fall back to copy + delete; if deleting the source fails, the implementation tries to remove the copied destination and returns an error.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `source` | `string` | 是 | 源文件路径 |
-| `destination` | `string` | 是 | 目标路径 |
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `source` | `string` | yes |
+| `destination` | `string` | yes |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `source` | `string` | 源文件的绝对路径 |
-| `destination` | `string` | 目标文件的绝对路径 |
+| Field | Type |
+|-------|------|
+| `source` | `string` |
+| `destination` | `string` |
 
 ---
 
 ## `copy_file`
 
-复制普通文件。目标路径已存在时失败，自动创建目标路径的父目录。
+Copy a file. Fails if the destination exists; creates parent dirs as needed.
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `source` | `string` | 是 | 源文件路径 |
-| `destination` | `string` | 是 | 目标路径 |
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `source` | `string` | yes |
+| `destination` | `string` | yes |
 
-**返回**
+**Returns**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `source` | `string` | 源文件的绝对路径 |
-| `destination` | `string` | 目标文件的绝对路径 |
+| Field | Type |
+|-------|------|
+| `source` | `string` |
+| `destination` | `string` |
 
-## 错误码
+## Error codes
 
-本模块工具可能返回的 `error.code` 如下（与 [`../error.rs`](../error.rs) 中 `ToolErrorCode` 一致）。
+Typical `error.code` values (see [`error.rs`](error.rs) `FsErrorCode`; I/O may add system-mapped codes):
 
-| 错误码 | 说明 |
-|--------|------|
-| `FILE_NOT_FOUND` | 文件或目录不存在 |
-| `PERMISSION_DENIED` | 无读写权限 |
-| `FILE_ALREADY_EXISTS` | 目标路径已存在（如 `move_file` / `copy_file`） |
-| `DIRECTORY_NOT_EMPTY` | 目录非空等 I/O 语义错误（映射自系统错误） |
-| `PATTERN_NOT_FOUND` | `edit_file` 的 `old_text` 未找到 |
-| `PATTERN_NOT_UNIQUE` | `edit_file` 的 `old_text` 匹配到多处 |
-| `INVALID_PATH` | 路径为空、非法、目标类型不符（如对目录调用 `delete_file`）、超出沙箱，或其它归一化/解析失败 |
+| Code | Meaning |
+|------|---------|
+| `FILE_NOT_FOUND` | Missing file or directory |
+| `PERMISSION_DENIED` | Read/write not allowed |
+| `FILE_ALREADY_EXISTS` | Destination exists (`move_file` / `copy_file`) |
+| `DIRECTORY_NOT_EMPTY` | Non-empty directory or similar I/O semantics |
+| `PATTERN_NOT_FOUND` | `old_text` not found in `edit_file` |
+| `PATTERN_NOT_UNIQUE` | `old_text` matches more than once |
+| `INVALID_PATH` | Empty/invalid path, wrong type (e.g. delete on directory), sandbox violation, or normalization failure |

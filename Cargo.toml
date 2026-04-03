@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Zoranner"]
 license = "MIT"
 repository = "https://github.com/Zoranner/agent-tools"
-description = "A toolkit for document editing agents"
+description = "Rust toolkit for AI agents: JSON Schema-defined tools for workspace files, search, web, Markdown, Git, memory, human-in-the-loop hooks, and todos."
 
 [features]
 default = []

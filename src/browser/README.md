@@ -1,5 +1,7 @@
-# 浏览器（`browser`）
+# Browser (`browser`)
 
-[← 返回仓库说明](../../README.md)
+[中文](README.zh.md) | English
 
-本模块尚在规划中。实现入口：[mod.rs](mod.rs)。工具说明与错误码将在落地后补充。
+[← Back to repository overview](../../README.md)
+
+Planned. Entry point: [mod.rs](mod.rs). Tool specs and error codes will be added when implemented.
