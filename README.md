@@ -52,7 +52,7 @@ async fn example() -> Result<(), agentool::ToolError> {
 | `web` | `web_search` / `web_fetch` |
 | `md` | `extract_toc` / `markdown_stats` |
 | `git` | `git_status` / `git_diff` / `git_commit` / `git_log` |
-| `memory` | `memory_write` / `memory_read` / `memory_search` |
+| `memory` | `memory_write` / `memory_update` / `memory_read` / `memory_search` |
 | `interact` | `ask` / `confirm` / `notify` |
 | `full` | 全部已发布模块 |
 

@@ -50,21 +50,21 @@ macro_rules! memory_tool {
 memory_tool!(
     MemoryWriteTool,
     "memory_write",
-    "Append a Markdown memory block under the workspace `.agent/memory` tree (OpenClaw-inspired). `target: daily` writes to YYYY/MM/dd.md; `target: summary` appends to MEMORY.md. Each block uses `### key` plus machine-readable footer comments for search/read.",
+    "Create a new memory block only if `key` does not exist anywhere under the memory directory. `target: daily` writes to YYYY/MM/dd.md (UTC date); `target: summary` appends to MEMORY.md. On duplicate key, returns MEMORY_KEY_EXISTS — use memory_read then memory_update.",
     schema = json!({
         "type": "object",
         "properties": {
-            "key": { "type": "string", "description": "Single-line heading key for this block (### key)" },
+            "key": { "type": "string", "description": "Single-line heading key (### key); must be globally unique" },
             "content": { "type": "string", "description": "Body text under the heading" },
             "target": {
                 "type": "string",
                 "enum": ["daily", "summary"],
-                "description": "daily = time-based log file; summary = long-term MEMORY.md"
+                "description": "daily = dated log; summary = MEMORY.md"
             },
             "tags": {
                 "type": "array",
                 "items": { "type": "string" },
-                "description": "Optional labels; stored in footer metadata for memory_search filtering"
+                "description": "Optional labels in footer metadata"
             }
         },
         "required": ["key", "content"]
@@ -73,13 +73,33 @@ memory_tool!(
 );
 
 memory_tool!(
-    MemoryReadTool,
-    "memory_read",
-    "Load the latest memory block with the given key across MEMORY.md and all dated logs under the memory directory.",
+    MemoryUpdateTool,
+    "memory_update",
+    "Replace the canonical block for `key`: same resolution as memory_read (summary in MEMORY.md wins over daily logs; then newest `at`). Removes that block from disk and appends the updated block at the end of the same file.",
     schema = json!({
         "type": "object",
         "properties": {
-            "key": { "type": "string", "description": "The ### heading key to find" }
+            "key": { "type": "string", "description": "Existing ### key" },
+            "content": { "type": "string", "description": "New body text" },
+            "tags": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Optional labels (replaces footer tags)"
+            }
+        },
+        "required": ["key", "content"]
+    }),
+    op = op_memory_update
+);
+
+memory_tool!(
+    MemoryReadTool,
+    "memory_read",
+    "Load the canonical block for `key`: if any block exists in MEMORY.md, the newest among those is returned; otherwise the newest among daily logs. Response includes `kind`: \"summary\" or \"daily\".",
+    schema = json!({
+        "type": "object",
+        "properties": {
+            "key": { "type": "string", "description": "The ### heading key" }
         },
         "required": ["key"]
     }),
@@ -89,15 +109,15 @@ memory_tool!(
 memory_tool!(
     MemorySearchTool,
     "memory_search",
-    "Substring search (case-insensitive) over keys and bodies in all .md files under the memory directory. Optional tags require every listed tag in the block metadata. Newest blocks (by footer timestamp) first.",
+    "Substring search (case-insensitive) over keys and bodies. Results include `kind` (summary vs daily). Summary entries are listed before daily; within each tier, newer `at` first.",
     schema = json!({
         "type": "object",
         "properties": {
-            "query": { "type": "string", "description": "Substring to match; empty matches any (subject to tag filter)" },
+            "query": { "type": "string", "description": "Substring; empty matches any (subject to tag filter)" },
             "tags": {
                 "type": "array",
                 "items": { "type": "string" },
-                "description": "If set, block must contain all of these tags"
+                "description": "Block must contain all listed tags"
             },
             "limit": { "type": "integer", "description": "Max results (default 10, max 100)" }
         },
@@ -109,6 +129,7 @@ memory_tool!(
 pub fn all_tools(ctx: Arc<MemoryContext>) -> Vec<Arc<dyn Tool>> {
     vec![
         Arc::new(MemoryWriteTool::new(ctx.clone())),
+        Arc::new(MemoryUpdateTool::new(ctx.clone())),
         Arc::new(MemoryReadTool::new(ctx.clone())),
         Arc::new(MemorySearchTool::new(ctx)),
     ]

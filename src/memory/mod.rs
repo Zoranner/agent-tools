@@ -1,4 +1,5 @@
-//! Long-lived memory tools: [`memory_write`](MemoryWriteTool), [`memory_read`](MemoryReadTool), [`memory_search`](MemorySearchTool).
+//! Long-lived memory tools: [`memory_write`](MemoryWriteTool), [`memory_update`](MemoryUpdateTool),
+//! [`memory_read`](MemoryReadTool), [`memory_search`](MemorySearchTool).
 //!
 //! Default layout (OpenClaw-style, paths adjusted): **`.agent/memory/YYYY/MM/dd.md`** for append-only daily notes,
 //! and **`.agent/memory/MEMORY.md`** for curated long-term summary. See [`MemoryContext`].
@@ -10,7 +11,7 @@ mod tools;
 
 use std::path::{Path, PathBuf};
 
-pub use tools::{all_tools, MemoryReadTool, MemorySearchTool, MemoryWriteTool};
+pub use tools::{all_tools, MemoryReadTool, MemorySearchTool, MemoryUpdateTool, MemoryWriteTool};
 
 /// Workspace root, optional sandbox bypass, and relative path to the memory **directory** (not a single file).
 #[derive(Debug, Clone)]
@@ -68,7 +69,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn write_read_search_daily_and_summary() {
+    async fn write_read_search_update_and_summary_priority() {
         let root = tmp_root();
         let ctx = Arc::new(
             MemoryContext::with_memory_dir_relative(Some(root.clone()), false, Path::new("mem"))
@@ -77,6 +78,10 @@ mod tests {
         let tools = all_tools(ctx);
 
         let write = tools.iter().find(|t| t.name() == "memory_write").unwrap();
+        let update = tools.iter().find(|t| t.name() == "memory_update").unwrap();
+        let read = tools.iter().find(|t| t.name() == "memory_read").unwrap();
+        let search = tools.iter().find(|t| t.name() == "memory_search").unwrap();
+
         write
             .execute(json!({
                 "key": "k1",
@@ -87,56 +92,84 @@ mod tests {
             .await
             .unwrap();
 
-        let read = tools.iter().find(|t| t.name() == "memory_read").unwrap();
+        let dup = write
+            .execute(json!({ "key": "k1", "content": "nope", "target": "daily" }))
+            .await
+            .unwrap_err();
+        assert_eq!(dup.code, "MEMORY_KEY_EXISTS");
+
         let out = read.execute(json!({ "key": "k1" })).await.unwrap();
         assert_eq!(out["data"]["content"], "hello 中文 world");
+        assert_eq!(out["data"]["kind"], "daily");
         let tags = out["data"]["tags"].as_array().unwrap();
         assert_eq!(tags.len(), 2);
-        let file = out["data"]["file"].as_str().unwrap();
-        assert!(file.ends_with(".md"));
-        assert!(file.contains('/'));
+
+        update
+            .execute(json!({ "key": "k1", "content": "updated body" }))
+            .await
+            .unwrap();
+        let out2 = read.execute(json!({ "key": "k1" })).await.unwrap();
+        assert_eq!(out2["data"]["content"], "updated body");
+
+        let s = search
+            .execute(json!({ "query": "updated", "limit": 5 }))
+            .await
+            .unwrap();
+        assert_eq!(s["data"]["results"].as_array().unwrap().len(), 1);
 
         let mem_root = root.join("mem");
-        let daily_path = mem_root.join(file);
-        assert!(daily_path.is_file());
-        let raw = fs::read_to_string(&daily_path).unwrap();
-        assert!(raw.contains("### k1"));
-        assert!(raw.contains("hello 中文 world"));
-
-        let search = tools.iter().find(|t| t.name() == "memory_search").unwrap();
-        let s = search
-            .execute(json!({ "query": "中文", "limit": 5 }))
-            .await
-            .unwrap();
-        let results = s["data"]["results"].as_array().unwrap();
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0]["key"], "k1");
-
-        let filtered = search
-            .execute(json!({ "query": "", "tags": ["a"], "limit": 10 }))
-            .await
-            .unwrap();
-        assert_eq!(filtered["data"]["results"].as_array().unwrap().len(), 1);
+        let summary = mem_root.join("MEMORY.md");
 
         write
             .execute(json!({
-                "key": "pref",
-                "content": "long-term fact",
+                "key": "dup_key",
+                "content": "daily dup",
+                "target": "daily"
+            }))
+            .await
+            .unwrap();
+        fs::write(
+            &summary,
+            r####"### dup_key
+
+summary wins
+
+<!-- agentool-memory: at=2099-01-01T00:00:00+00:00 tags=s -->
+
+"####,
+        )
+        .unwrap();
+        let dup_read = read.execute(json!({ "key": "dup_key" })).await.unwrap();
+        assert_eq!(dup_read["data"]["kind"], "summary");
+        assert!(dup_read["data"]["content"]
+            .as_str()
+            .unwrap()
+            .contains("summary wins"));
+
+        write
+            .execute(json!({
+                "key": "sort_a",
+                "content": "needle",
+                "target": "daily"
+            }))
+            .await
+            .unwrap();
+        write
+            .execute(json!({
+                "key": "sort_b",
+                "content": "needle summary",
                 "target": "summary"
             }))
             .await
             .unwrap();
-        let summary = mem_root.join("MEMORY.md");
-        assert!(summary.is_file());
-        let sum_raw = fs::read_to_string(&summary).unwrap();
-        assert!(sum_raw.contains("### pref"));
-        assert!(sum_raw.contains("long-term fact"));
-
-        let s2 = search
-            .execute(json!({ "query": "long-term", "limit": 5 }))
+        let needle = search
+            .execute(json!({ "query": "needle", "limit": 10 }))
             .await
             .unwrap();
-        assert_eq!(s2["data"]["results"].as_array().unwrap().len(), 1);
+        let arr = needle["data"]["results"].as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0]["kind"], "summary");
+        assert_eq!(arr[1]["kind"], "daily");
 
         let miss = read.execute(json!({ "key": "missing" })).await.unwrap_err();
         assert_eq!(miss.code, "MEMORY_KEY_NOT_FOUND");

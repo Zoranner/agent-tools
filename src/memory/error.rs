@@ -3,6 +3,7 @@ use crate::tool::ToolError;
 #[derive(Clone, Copy)]
 pub(crate) enum MemoryErrorCode {
     KeyNotFound,
+    KeyExists,
     InvalidKey,
     InvalidTarget,
     StorageError,
@@ -12,6 +13,7 @@ impl MemoryErrorCode {
     const fn as_str(self) -> &'static str {
         match self {
             Self::KeyNotFound => "MEMORY_KEY_NOT_FOUND",
+            Self::KeyExists => "MEMORY_KEY_EXISTS",
             Self::InvalidKey => "MEMORY_INVALID_KEY",
             Self::InvalidTarget => "MEMORY_INVALID_TARGET",
             Self::StorageError => "MEMORY_STORAGE_ERROR",
