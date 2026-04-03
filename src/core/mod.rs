@@ -7,5 +7,11 @@
 pub(crate) mod blocking;
 pub(crate) mod json;
 
-#[cfg(any(feature = "fs", feature = "md", feature = "git", feature = "find"))]
+#[cfg(any(
+    feature = "fs",
+    feature = "md",
+    feature = "git",
+    feature = "find",
+    feature = "memory"
+))]
 pub(crate) mod path;

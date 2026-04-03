@@ -81,11 +81,11 @@ pub(crate) fn op_git_diff(ctx: &GitContext, params: &Value) -> ToolResult {
     let diff = if staged {
         let head = repo.head().map_err(map_git_err)?;
         let tree = head.peel_to_tree().map_err(map_git_err)?;
-        let mut index = repo.index().map_err(map_git_err)?;
-        repo.diff_tree_to_index(Some(&tree), Some(&mut index), Some(&mut diff_opts))
+        let index = repo.index().map_err(map_git_err)?;
+        repo.diff_tree_to_index(Some(&tree), Some(&index), Some(&mut diff_opts))
     } else {
-        let mut index = repo.index().map_err(map_git_err)?;
-        repo.diff_index_to_workdir(Some(&mut index), Some(&mut diff_opts))
+        let index = repo.index().map_err(map_git_err)?;
+        repo.diff_index_to_workdir(Some(&index), Some(&mut diff_opts))
     }
     .map_err(map_git_err)?;
     let mut buf = String::new();
