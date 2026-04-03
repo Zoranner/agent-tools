@@ -5,17 +5,11 @@ use regex::Regex;
 use reqwest::{Client, Url};
 use serde_json::Value;
 
-use crate::{ToolError, ToolErrorCode};
+use crate::tool::ToolError;
+use crate::web::error::{tool_error, WebErrorCode};
 
 use super::super::backend::WebSearchBackend;
 use super::super::types::WebSearchResult;
-
-fn tool_error(code: ToolErrorCode, message: impl Into<String>) -> ToolError {
-    ToolError {
-        code,
-        message: message.into(),
-    }
-}
 
 fn decode_ddg_href(href: &str) -> String {
     let absolute = if href.starts_with("//") {
@@ -101,7 +95,7 @@ fn collect_ddg_related(item: &Value, out: &mut Vec<WebSearchResult>, limit: usiz
 fn results_from_ddg_json(body: &str, limit: usize) -> Result<Vec<WebSearchResult>, ToolError> {
     let v: Value = serde_json::from_str(body).map_err(|e| {
         tool_error(
-            ToolErrorCode::NetworkError,
+            WebErrorCode::NetworkError,
             format!("invalid search response JSON: {e}"),
         )
     })?;
@@ -185,7 +179,7 @@ impl WebSearchBackend for DuckDuckGoSearchBackend {
         limit: usize,
     ) -> Result<Vec<WebSearchResult>, ToolError> {
         let instant_url = Url::parse("https://api.duckduckgo.com/")
-            .map_err(|e| tool_error(ToolErrorCode::NetworkError, e.to_string()))?;
+            .map_err(|e| tool_error(WebErrorCode::NetworkError, e.to_string()))?;
         let instant_resp = client
             .get(instant_url)
             .query(&[
@@ -196,29 +190,29 @@ impl WebSearchBackend for DuckDuckGoSearchBackend {
             ])
             .send()
             .await
-            .map_err(|e| tool_error(ToolErrorCode::NetworkError, e.to_string()))?;
+            .map_err(|e| tool_error(WebErrorCode::NetworkError, e.to_string()))?;
 
         let instant_text = instant_resp
             .text()
             .await
-            .map_err(|e| tool_error(ToolErrorCode::NetworkError, e.to_string()))?;
+            .map_err(|e| tool_error(WebErrorCode::NetworkError, e.to_string()))?;
 
         let mut results = results_from_ddg_json(&instant_text, limit)?;
 
         if results.len() < limit {
             let html_url = Url::parse("https://html.duckduckgo.com/html/")
-                .map_err(|e| tool_error(ToolErrorCode::NetworkError, e.to_string()))?;
+                .map_err(|e| tool_error(WebErrorCode::NetworkError, e.to_string()))?;
             let html_resp = client
                 .post(html_url)
                 .form(&[("q", query), ("b", "")])
                 .send()
                 .await
-                .map_err(|e| tool_error(ToolErrorCode::NetworkError, e.to_string()))?;
+                .map_err(|e| tool_error(WebErrorCode::NetworkError, e.to_string()))?;
 
             let html = html_resp
                 .text()
                 .await
-                .map_err(|e| tool_error(ToolErrorCode::NetworkError, e.to_string()))?;
+                .map_err(|e| tool_error(WebErrorCode::NetworkError, e.to_string()))?;
 
             let extra = results_from_ddg_html(&html, limit);
             for item in extra {

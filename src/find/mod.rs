@@ -4,6 +4,7 @@
 //! Use [`FindContext`] for the default scan root (canonical). Omitted `path` in tool calls starts
 //! from that root. Relative `path` joins against it; absolute paths are accepted as-is.
 
+mod error;
 mod ops;
 mod path;
 mod tools;
@@ -104,7 +105,7 @@ mod tests {
         let tools = all_tools(ctx);
         let grep = tools.iter().find(|t| t.name() == "grep_search").unwrap();
         let err = grep.execute(json!({ "pattern": "(" })).await.unwrap_err();
-        assert_eq!(err.code.to_string(), "INVALID_PATTERN");
+        assert_eq!(err.code, "INVALID_PATTERN");
         let _ = fs::remove_dir_all(&root);
     }
 
@@ -140,7 +141,7 @@ mod tests {
             }))
             .await
             .unwrap_err();
-        assert_eq!(err.code.to_string(), "FILE_NOT_FOUND");
+        assert_eq!(err.code, "FILE_NOT_FOUND");
         let _ = fs::remove_dir_all(&root);
     }
 }

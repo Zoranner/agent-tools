@@ -1,10 +1,9 @@
-pub mod error;
 pub mod tool;
 
-pub use error::{ToolError, ToolErrorCode};
-pub use tool::Tool;
+#[cfg(any(feature = "fs", feature = "md", feature = "git"))]
+mod core;
 
-pub type ToolResult = Result<serde_json::Value, ToolError>;
+pub use tool::{Tool, ToolError, ToolResult};
 
 #[cfg(feature = "fs")]
 pub mod fs;

@@ -6,9 +6,11 @@ use regex::RegexBuilder;
 use serde_json::{json, Value};
 use walkdir::WalkDir;
 
-use crate::{ToolError, ToolErrorCode, ToolResult};
+use crate::tool::{ToolError, ToolResult};
 
-use super::path::{display_path_relative, resolve_find_root, tool_error};
+use super::error::{tool_error, FindErrorCode};
+
+use super::path::{display_path_relative, resolve_find_root};
 use super::FindContext;
 
 fn ok_data(data: Value) -> Value {
@@ -21,7 +23,7 @@ fn ok_data(data: Value) -> Value {
 fn json_str<'a>(params: &'a Value, key: &str) -> Result<&'a str, ToolError> {
     params.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
         tool_error(
-            ToolErrorCode::InvalidPath,
+            FindErrorCode::InvalidPath,
             format!("missing or invalid `{key}`"),
         )
     })
@@ -42,13 +44,13 @@ fn json_bool_opt(params: &Value, key: &str, default: bool) -> bool {
 fn build_glob_set(pattern: &str) -> Result<GlobSet, ToolError> {
     let g = Glob::new(pattern).map_err(|e| {
         tool_error(
-            ToolErrorCode::InvalidPattern,
+            FindErrorCode::InvalidPattern,
             format!("invalid glob pattern: {e}"),
         )
     })?;
     GlobSetBuilder::new().add(g).build().map_err(|e| {
         tool_error(
-            ToolErrorCode::InvalidPattern,
+            FindErrorCode::InvalidPattern,
             format!("invalid glob pattern: {e}"),
         )
     })
@@ -67,7 +69,7 @@ pub(crate) fn op_grep_search(ctx: &FindContext, params: &Value) -> ToolResult {
     let pattern = json_str(params, "pattern")?;
     if pattern.trim().is_empty() {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FindErrorCode::InvalidPath,
             "`pattern` must not be empty",
         ));
     }
@@ -80,7 +82,7 @@ pub(crate) fn op_grep_search(ctx: &FindContext, params: &Value) -> ToolResult {
         .build()
         .map_err(|e| {
             tool_error(
-                ToolErrorCode::InvalidPattern,
+                FindErrorCode::InvalidPattern,
                 format!("invalid regular expression: {e}"),
             )
         })?;
@@ -98,7 +100,7 @@ pub(crate) fn op_grep_search(ctx: &FindContext, params: &Value) -> ToolResult {
 
     for entry in walker {
         let entry = entry
-            .map_err(|e| tool_error(ToolErrorCode::InvalidPath, format!("walk directory: {e}")))?;
+            .map_err(|e| tool_error(FindErrorCode::InvalidPath, format!("walk directory: {e}")))?;
         let p = entry.path();
         if !entry.file_type().is_file() {
             continue;
@@ -131,7 +133,7 @@ pub(crate) fn op_glob_search(ctx: &FindContext, params: &Value) -> ToolResult {
     let pattern = json_str(params, "pattern")?;
     if pattern.trim().is_empty() {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FindErrorCode::InvalidPath,
             "`pattern` must not be empty",
         ));
     }
@@ -146,7 +148,7 @@ pub(crate) fn op_glob_search(ctx: &FindContext, params: &Value) -> ToolResult {
 
     for entry in walker {
         let entry = entry
-            .map_err(|e| tool_error(ToolErrorCode::InvalidPath, format!("walk directory: {e}")))?;
+            .map_err(|e| tool_error(FindErrorCode::InvalidPath, format!("walk directory: {e}")))?;
         if !entry.file_type().is_file() {
             continue;
         }
@@ -172,7 +174,7 @@ where
 {
     tokio::task::spawn_blocking(f).await.map_err(|e| {
         tool_error(
-            ToolErrorCode::InvalidPath,
+            FindErrorCode::InvalidPath,
             format!("blocking task failed: {e}"),
         )
     })?

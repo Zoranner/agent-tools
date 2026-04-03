@@ -1,7 +1,23 @@
 use async_trait::async_trait;
 use serde_json::Value;
+use thiserror::Error;
 
-use crate::ToolResult;
+/// Unified JSON error shape: `error.code` / `error.message`. Stable codes are defined per tool module (`fs::error`, `web::error`, …).
+#[derive(Debug, Error)]
+#[error("{code}: {message}")]
+pub struct ToolError {
+    pub code: String,
+    pub message: String,
+}
+
+pub type ToolResult = Result<Value, ToolError>;
+
+pub fn join_blocking_error(err: tokio::task::JoinError) -> ToolError {
+    ToolError {
+        code: "INVALID_PATH".into(),
+        message: format!("blocking task failed: {err}"),
+    }
+}
 
 #[async_trait]
 pub trait Tool: Send + Sync {

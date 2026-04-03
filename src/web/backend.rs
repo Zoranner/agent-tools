@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use reqwest::{Client, Url};
 
-use crate::ToolError;
+use crate::tool::ToolError;
 
 use super::types::{WebFetchResult, WebSearchResult};
 

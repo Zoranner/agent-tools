@@ -1,16 +1,10 @@
 use reqwest::Url;
 use serde_json::{json, Value};
 
-use crate::{ToolError, ToolErrorCode, ToolResult};
+use crate::tool::{ToolError, ToolResult};
 
+use super::error::{tool_error, WebErrorCode};
 use super::WebContext;
-
-fn tool_error(code: ToolErrorCode, message: impl Into<String>) -> ToolError {
-    ToolError {
-        code,
-        message: message.into(),
-    }
-}
 
 fn ok_data(data: Value) -> Value {
     json!({
@@ -22,7 +16,7 @@ fn ok_data(data: Value) -> Value {
 fn json_str<'a>(params: &'a Value, key: &str) -> Result<&'a str, ToolError> {
     params.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
         tool_error(
-            ToolErrorCode::NetworkError,
+            WebErrorCode::NetworkError,
             format!("missing or invalid `{key}`"),
         )
     })
@@ -41,7 +35,7 @@ fn json_limit(params: &Value, default: u64, max: u64) -> Result<u64, ToolError> 
     } else if let Some(i) = v.as_i64() {
         if i < 0 {
             return Err(tool_error(
-                ToolErrorCode::NetworkError,
+                WebErrorCode::NetworkError,
                 "`limit` must be non-negative",
             ));
         }
@@ -49,14 +43,14 @@ fn json_limit(params: &Value, default: u64, max: u64) -> Result<u64, ToolError> 
     } else if let Some(f) = v.as_f64() {
         if f < 0.0 || f.fract() != 0.0 {
             return Err(tool_error(
-                ToolErrorCode::NetworkError,
+                WebErrorCode::NetworkError,
                 "`limit` must be a non-negative whole number",
             ));
         }
         f as u64
     } else {
         return Err(tool_error(
-            ToolErrorCode::NetworkError,
+            WebErrorCode::NetworkError,
             "`limit` must be a number",
         ));
     };
@@ -67,7 +61,7 @@ pub(crate) async fn op_web_search(ctx: &WebContext, params: &Value) -> ToolResul
     let query = json_str(params, "query")?.trim();
     if query.is_empty() {
         return Err(tool_error(
-            ToolErrorCode::NetworkError,
+            WebErrorCode::NetworkError,
             "`query` must not be empty",
         ));
     }
@@ -97,17 +91,17 @@ pub(crate) async fn op_web_fetch(ctx: &WebContext, params: &Value) -> ToolResult
     let url_str = json_str(params, "url")?.trim();
     if url_str.is_empty() {
         return Err(tool_error(
-            ToolErrorCode::NetworkError,
+            WebErrorCode::NetworkError,
             "`url` must not be empty",
         ));
     }
 
     let parsed = Url::parse(url_str)
-        .map_err(|e| tool_error(ToolErrorCode::NetworkError, format!("invalid URL: {e}")))?;
+        .map_err(|e| tool_error(WebErrorCode::NetworkError, format!("invalid URL: {e}")))?;
     let scheme = parsed.scheme();
     if scheme != "http" && scheme != "https" {
         return Err(tool_error(
-            ToolErrorCode::NetworkError,
+            WebErrorCode::NetworkError,
             "only http and https URLs are allowed",
         ));
     }

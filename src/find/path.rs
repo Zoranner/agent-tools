@@ -1,13 +1,8 @@
 use std::path::{Component, Path, PathBuf};
 
-use crate::{ToolError, ToolErrorCode};
+use crate::tool::ToolError;
 
-pub(crate) fn tool_error(code: ToolErrorCode, message: impl Into<String>) -> ToolError {
-    ToolError {
-        code,
-        message: message.into(),
-    }
-}
+use super::error::{tool_error, FindErrorCode};
 
 /// Lexical normalization: collapse `.` / `..` without touching the filesystem.
 pub(crate) fn normalize_path(path: &Path) -> PathBuf {
@@ -47,20 +42,17 @@ pub(crate) fn resolve_find_root(
     };
     if !logical.exists() {
         return Err(tool_error(
-            ToolErrorCode::FileNotFound,
+            FindErrorCode::FileNotFound,
             "find root path does not exist",
         ));
     }
     logical.canonicalize().map_err(|e| {
         let code = match e.kind() {
-            std::io::ErrorKind::NotFound => ToolErrorCode::FileNotFound,
-            std::io::ErrorKind::PermissionDenied => ToolErrorCode::PermissionDenied,
-            _ => ToolErrorCode::InvalidPath,
+            std::io::ErrorKind::NotFound => FindErrorCode::FileNotFound,
+            std::io::ErrorKind::PermissionDenied => FindErrorCode::PermissionDenied,
+            _ => FindErrorCode::InvalidPath,
         };
-        ToolError {
-            code,
-            message: format!("resolve find root: {e}"),
-        }
+        tool_error(code, format!("resolve find root: {e}"))
     })
 }
 

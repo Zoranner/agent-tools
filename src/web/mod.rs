@@ -6,6 +6,7 @@
 
 mod backend;
 mod backends;
+mod error;
 mod html;
 mod ops;
 mod tools;
@@ -173,7 +174,7 @@ mod tests {
             _client: &Client,
             query: &str,
             _limit: usize,
-        ) -> Result<Vec<WebSearchResult>, crate::ToolError> {
+        ) -> Result<Vec<WebSearchResult>, crate::tool::ToolError> {
             Ok(vec![WebSearchResult {
                 title: "stub".to_string(),
                 url: "https://example.test/".to_string(),

@@ -50,7 +50,7 @@ async fn example() -> Result<(), agentool::ToolError> {
 | `fs` | `read_file` / `write_file` / `edit_file` / `create_directory` / `list_directory` / `delete_file` / `move_file` / `copy_file` |
 | `find` | `grep_search` / `glob_search` |
 | `web` | `web_search` / `web_fetch` |
-| `md` | `extract_toc` / `count_words` |
+| `md` | `extract_toc` / `markdown_stats` |
 | `git` | `git_status` / `git_diff` / `git_commit` / `git_log` |
 | `memory` | `memory_write` / `memory_read` / `memory_search` |
 | `interact` | `ask` / `confirm` / `notify` |

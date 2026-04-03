@@ -5,9 +5,8 @@
 //! stay under the root; when `true`, that check is omitted (absolute paths and `..` normalization
 //! may therefore leave the workspace).
 
-mod error_map;
+mod error;
 mod ops;
-mod path_policy;
 mod tools;
 
 use std::path::PathBuf;
@@ -119,7 +118,7 @@ mod tests {
             }))
             .await
             .unwrap_err();
-        assert_eq!(err.code.to_string(), "PATTERN_NOT_UNIQUE");
+        assert_eq!(err.code, "PATTERN_NOT_UNIQUE");
 
         let err = edit
             .execute(json!({
@@ -129,7 +128,7 @@ mod tests {
             }))
             .await
             .unwrap_err();
-        assert_eq!(err.code.to_string(), "PATTERN_NOT_FOUND");
+        assert_eq!(err.code, "PATTERN_NOT_FOUND");
 
         edit.execute(json!({
             "path": "x.txt",
@@ -154,7 +153,7 @@ mod tests {
         let tools = all_tools(ctx);
         let del = tools.iter().find(|t| t.name() == "delete_file").unwrap();
         let err = del.execute(json!({ "path": "d" })).await.unwrap_err();
-        assert_eq!(err.code.to_string(), "INVALID_PATH");
+        assert_eq!(err.code, "INVALID_PATH");
         let _ = fs::remove_dir_all(&root);
     }
 
@@ -177,7 +176,7 @@ mod tests {
             .execute(json!({ "source": "a.txt", "destination": "b.txt" }))
             .await
             .unwrap_err();
-        assert_eq!(err.code.to_string(), "FILE_ALREADY_EXISTS");
+        assert_eq!(err.code, "FILE_ALREADY_EXISTS");
         let _ = fs::remove_dir_all(&root);
     }
 
@@ -198,7 +197,7 @@ mod tests {
             json!({ "path": "t.txt", "limit": 1.5 }),
         ] {
             let err = read.execute(params).await.unwrap_err();
-            assert_eq!(err.code.to_string(), "INVALID_PATH");
+            assert_eq!(err.code, "INVALID_PATH");
         }
 
         let _ = fs::remove_dir_all(&root);
@@ -326,7 +325,7 @@ mod tests {
             .execute(json!({ "path": sibling.to_string_lossy() }))
             .await
             .unwrap_err();
-        assert_eq!(err.code.to_string(), "INVALID_PATH");
+        assert_eq!(err.code, "INVALID_PATH");
         let _ = fs::remove_file(&sibling);
         let _ = fs::remove_dir_all(&root);
     }
@@ -353,7 +352,7 @@ mod tests {
             .execute(json!({ "path": path_arg.clone() }))
             .await
             .unwrap_err();
-        assert_eq!(err.code.to_string(), "INVALID_PATH");
+        assert_eq!(err.code, "INVALID_PATH");
 
         let ctx_relaxed = Arc::new(FsContext::new(Some(workspace.clone()), true).unwrap());
         let tools_relaxed = all_tools(ctx_relaxed);

@@ -4,16 +4,17 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{json, Value};
 
-use crate::{ToolError, ToolErrorCode, ToolResult};
+use crate::core::path::{map_io_error, resolve_against_workspace_root};
+use crate::tool::{ToolError, ToolResult};
 
-use super::error_map::{map_io_error, tool_error};
-use super::path_policy::{combine_and_normalize, resolve_sandboxed, resolve_with_existing_prefix};
+use super::error::{tool_error, FsErrorCode};
+
 use super::FsContext;
 
 fn json_str<'a>(params: &'a Value, key: &str) -> Result<&'a str, ToolError> {
     params.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
         tool_error(
-            ToolErrorCode::InvalidPath,
+            FsErrorCode::InvalidPath,
             format!("missing or invalid `{key}`"),
         )
     })
@@ -36,7 +37,7 @@ fn json_u64_integer_opt(params: &Value, key: &str) -> Result<Option<u64>, ToolEr
         }
     }
     Err(tool_error(
-        ToolErrorCode::InvalidPath,
+        FsErrorCode::InvalidPath,
         format!("`{key}` must be a non-negative JSON integer"),
     ))
 }
@@ -49,26 +50,7 @@ fn ok_data(data: Value) -> Value {
 }
 
 fn resolve(ctx: &FsContext, user: &str) -> Result<PathBuf, ToolError> {
-    let s = user.trim();
-    if s.is_empty() {
-        return Err(tool_error(ToolErrorCode::InvalidPath, "path is empty"));
-    }
-    let user_path = Path::new(s);
-    // Relative paths always join against `root_canonical` (same as sandbox). Sandbox mode then
-    // enforces the result stays under root; relaxed mode skips that check so absolute targets and
-    // lexically-normalized paths outside root are allowed.
-    let logical = combine_and_normalize(&ctx.root_canonical, user_path);
-
-    if ctx.allow_outside_root {
-        if logical.exists() {
-            return logical
-                .canonicalize()
-                .map_err(|e| map_io_error(e, "canonicalize"));
-        }
-        return resolve_with_existing_prefix(&logical);
-    }
-
-    resolve_sandboxed(&ctx.root_canonical, &logical)
+    resolve_against_workspace_root(&ctx.root_canonical, ctx.allow_outside_root, user)
 }
 
 pub(crate) fn op_read_file(ctx: &FsContext, params: &Value) -> ToolResult {
@@ -77,14 +59,14 @@ pub(crate) fn op_read_file(ctx: &FsContext, params: &Value) -> ToolResult {
     let limit = json_u64_integer_opt(params, "limit")?;
     if let Some(0) = offset {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FsErrorCode::InvalidPath,
             "`offset` must be >= 1 when provided",
         ));
     }
     let resolved = resolve(ctx, path)?;
     if !resolved.is_file() {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FsErrorCode::InvalidPath,
             "path is not a regular file",
         ));
     }
@@ -142,14 +124,14 @@ pub(crate) fn op_edit_file(ctx: &FsContext, params: &Value) -> ToolResult {
     let new_text = json_str(params, "new_text")?;
     if old_text.is_empty() {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FsErrorCode::InvalidPath,
             "`old_text` must not be empty",
         ));
     }
     let resolved = resolve(ctx, path)?;
     if !resolved.is_file() {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FsErrorCode::InvalidPath,
             "path is not a regular file",
         ));
     }
@@ -157,7 +139,7 @@ pub(crate) fn op_edit_file(ctx: &FsContext, params: &Value) -> ToolResult {
     let count = text.match_indices(old_text).count();
     match count {
         0 => Err(tool_error(
-            ToolErrorCode::PatternNotFound,
+            FsErrorCode::PatternNotFound,
             "`old_text` not found in file",
         )),
         1 => {
@@ -171,7 +153,7 @@ pub(crate) fn op_edit_file(ctx: &FsContext, params: &Value) -> ToolResult {
             Ok(ok_data(json!({ "path": abs })))
         }
         _ => Err(tool_error(
-            ToolErrorCode::PatternNotUnique,
+            FsErrorCode::PatternNotUnique,
             "`old_text` matches multiple locations",
         )),
     }
@@ -194,7 +176,7 @@ pub(crate) fn op_list_directory(ctx: &FsContext, params: &Value) -> ToolResult {
     let resolved = resolve(ctx, path)?;
     if !resolved.is_dir() {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FsErrorCode::InvalidPath,
             "path is not a directory",
         ));
     }
@@ -228,7 +210,7 @@ pub(crate) fn op_delete_file(ctx: &FsContext, params: &Value) -> ToolResult {
     let meta = fs::metadata(&resolved).map_err(|e| map_io_error(e, "metadata"))?;
     if meta.is_dir() {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FsErrorCode::InvalidPath,
             "`delete_file` only removes regular files, not directories",
         ));
     }
@@ -244,7 +226,7 @@ pub(crate) fn op_delete_file(ctx: &FsContext, params: &Value) -> ToolResult {
 fn ensure_dest_absent(dest: &Path) -> Result<(), ToolError> {
     if dest.exists() {
         return Err(tool_error(
-            ToolErrorCode::FileAlreadyExists,
+            FsErrorCode::FileAlreadyExists,
             "destination path already exists",
         ));
     }
@@ -277,7 +259,7 @@ pub(crate) fn op_move_file(ctx: &FsContext, params: &Value) -> ToolResult {
     let src = resolve(ctx, source)?;
     if !src.is_file() {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FsErrorCode::InvalidPath,
             "`source` is not a regular file",
         ));
     }
@@ -301,7 +283,7 @@ pub(crate) fn op_copy_file(ctx: &FsContext, params: &Value) -> ToolResult {
     let src = resolve(ctx, source)?;
     if !src.is_file() {
         return Err(tool_error(
-            ToolErrorCode::InvalidPath,
+            FsErrorCode::InvalidPath,
             "`source` is not a regular file",
         ));
     }
@@ -326,7 +308,7 @@ where
 {
     tokio::task::spawn_blocking(f)
         .await
-        .map_err(super::error_map::join_blocking_error)?
+        .map_err(crate::tool::join_blocking_error)?
 }
 
 #[cfg(test)]
@@ -378,7 +360,7 @@ mod tests {
             move_with_rename_fallback(&src, &dst, |_, _| Err(std::io::Error::other("forced")))
                 .unwrap_err();
 
-        assert_eq!(err.code.to_string(), "FILE_NOT_FOUND");
+        assert_eq!(err.code, "FILE_NOT_FOUND");
         let _ = fs::remove_dir_all(&dir);
     }
 }

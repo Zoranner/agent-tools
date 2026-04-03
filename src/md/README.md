@@ -6,7 +6,9 @@
 
 ## `extract_toc`
 
-提取 Markdown 文档的目录结构。
+提取 Markdown 文档的 **ATX 标题**（`#` … `######`）目录；**围栏代码块**（` ``` ` / `~~~`）内的行不计入目录。
+
+路径解析与 `fs` 一致：相对路径相对 [`MdContext`](mod.rs) 的工作区根目录；`allow_outside_root == false` 时不得越出根目录。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -16,16 +18,19 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
+| `path` | `string` | 解析后的文件路径 |
 | `toc` | `TocItem[]` | 目录列表 |
 | `toc[].level` | `number` | 标题层级（1–6） |
 | `toc[].title` | `string` | 标题文本 |
-| `toc[].line` | `number` | 所在行号 |
+| `toc[].line` | `number` | 所在行号（从 1 起） |
 
 ---
 
-## `count_words`
+## `markdown_stats`
 
-统计文档字数及结构信息。
+统计 **非空白字符数**（字数）、段落数、ATX 标题数、总行数。`characters` / `paragraphs` **不包含围栏代码块**内文本；`headings` 仅统计 ATX 标题且同样忽略代码块；`lines` 为全文行数（含代码块与空行）。
+
+段落按 **空行分隔**（`\n\n`）粗略计数。不提供「词数」：中英文分词无统一口径，字数用 `characters` 即可。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -35,18 +40,18 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `characters` | `number` | 字符数（不含空格） |
-| `words` | `number` | 词数 |
+| `path` | `string` | 解析后的文件路径 |
+| `characters` | `number` | 非空白字符数 |
 | `paragraphs` | `number` | 段落数 |
-| `headings` | `number` | 标题数 |
+| `headings` | `number` | ATX 标题数 |
 | `lines` | `number` | 总行数 |
 
 ## 错误码
 
-工具按路径读文件时，预期与路径类操作一致；实现落地后可能返回（与 [`../error.rs`](../error.rs) 中 `ToolErrorCode` 一致）：
+读路径时的错误与 `fs` 类似（见 [`../error.rs`](../error.rs) 中 `ToolErrorCode`）：
 
 | 错误码 | 说明 |
 |--------|------|
-| `FILE_NOT_FOUND` | 给定路径不存在或不是文件 |
+| `FILE_NOT_FOUND` | 路径不存在或无法在沙箱内解析 |
 | `PERMISSION_DENIED` | 无读取权限 |
-| `INVALID_PATH` | 路径非法或 I/O 失败等 |
+| `INVALID_PATH` | 路径为空、越出工作区、`path` 不是普通文件、非 UTF-8 文本、或其它 I/O 失败 |

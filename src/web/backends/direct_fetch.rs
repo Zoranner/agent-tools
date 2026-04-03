@@ -1,18 +1,12 @@
 use async_trait::async_trait;
 use reqwest::{Client, Url};
 
-use crate::{ToolError, ToolErrorCode};
+use crate::tool::ToolError;
+use crate::web::error::{tool_error, WebErrorCode};
 
 use super::super::backend::WebFetchBackend;
 use super::super::html::extract_title;
 use super::super::types::WebFetchResult;
-
-fn tool_error(code: ToolErrorCode, message: impl Into<String>) -> ToolError {
-    ToolError {
-        code,
-        message: message.into(),
-    }
-}
 
 /// Fetch URL with [`reqwest`], convert HTML to Markdown using [`htmd`].
 #[derive(Debug, Default, Clone, Copy)]
@@ -25,13 +19,13 @@ impl WebFetchBackend for DirectFetchBackend {
             .get(url.clone())
             .send()
             .await
-            .map_err(|e| tool_error(ToolErrorCode::NetworkError, e.to_string()))?;
+            .map_err(|e| tool_error(WebErrorCode::NetworkError, e.to_string()))?;
 
         let final_url = resp.url().to_string();
         let status = resp.status();
         if !status.is_success() {
             return Err(tool_error(
-                ToolErrorCode::NetworkError,
+                WebErrorCode::NetworkError,
                 format!("HTTP {}", status.as_u16()),
             ));
         }
@@ -39,12 +33,12 @@ impl WebFetchBackend for DirectFetchBackend {
         let html = resp
             .text()
             .await
-            .map_err(|e| tool_error(ToolErrorCode::NetworkError, e.to_string()))?;
+            .map_err(|e| tool_error(WebErrorCode::NetworkError, e.to_string()))?;
 
         let title = extract_title(&html).unwrap_or_default();
         let content = htmd::convert(&html).map_err(|e| {
             tool_error(
-                ToolErrorCode::NetworkError,
+                WebErrorCode::NetworkError,
                 format!("HTML to Markdown conversion failed: {e}"),
             )
         })?;
