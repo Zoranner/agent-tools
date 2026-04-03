@@ -20,6 +20,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate version matches
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          cargo_version="$(
+            python - <<'PY'
+            import tomllib
+            from pathlib import Path
+
+            with Path("Cargo.toml").open("rb") as f:
+                print(tomllib.load(f)["package"]["version"])
+            PY
+          )"
+
+          if [ "$cargo_version" != "$tag_version" ]; then
+            echo "::error title=Version mismatch::Cargo.toml version '$cargo_version' does not match tag '$GITHUB_REF_NAME'"
+            exit 1
+          fi
+
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
