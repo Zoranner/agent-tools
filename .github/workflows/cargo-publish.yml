@@ -1,7 +1,6 @@
 # Cargo publish workflow
-# 推送 v* 标签时：全 feature 下 fmt / clippy / test，通过后按依赖顺序发布所有 crate。
-# 发版前务必将根 Cargo.toml 的 version 与标签一致（例如标签 v0.2.1 对应 version = "0.2.1"）。
-# 发布：agentool 单 crate。
+# 推送 v* 标签时：全 feature 下 fmt / clippy / test，通过后 cargo publish。
+# 发版前务必将 Cargo.toml 的 version 与标签一致（例如标签 v0.2.1 对应 version = "0.2.1"）。
 
 name: Cargo Publish
 
@@ -14,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  check:
+  common-test:
     name: Tests & Checks
     runs-on: ubuntu-latest
     steps:
@@ -44,9 +43,9 @@ jobs:
       - name: Run tests
         run: cargo test --all-features
 
-  publish:
+  publish-cargo:
     name: Publish to crates.io
-    needs: check
+    needs: common-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -64,5 +63,5 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
 
-      - name: Publish agentool
-        run: cargo publish --package agentool --token ${{ secrets.CARGO_ACCESS_TOKEN }}
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CARGO_ACCESS_TOKEN }}
