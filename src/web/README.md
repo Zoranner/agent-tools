@@ -86,8 +86,10 @@ let _tools = all_tools(ctx);
 
 ## 错误码
 
-本模块工具可能返回的 `error.code` 如下（与 [`../error.rs`](../error.rs) 中 `ToolErrorCode` 一致）。
+- 字符串必填项缺失/类型错误：[`core/json.rs`](../core/json.rs) → `INVALID_PATH`  
+- 网络与 `limit` 校验：[`error.rs`](error.rs) 中 `WebErrorCode` → `NETWORK_ERROR`
 
 | 错误码 | 说明 |
 |--------|------|
-| `NETWORK_ERROR` | 搜索或抓取请求失败、超时、HTTP 非预期等 |
+| `INVALID_PATH` | 缺少或类型不对的 `query` / `url` 等字符串参数 |
+| `NETWORK_ERROR` | `limit` 非法、搜索/抓取失败、HTTP 非成功、仅允许 http(s) 等 |

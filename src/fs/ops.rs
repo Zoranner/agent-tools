@@ -4,21 +4,13 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{json, Value};
 
+use crate::core::json::{json_str, ok_data};
 use crate::core::path::{map_io_error, resolve_against_workspace_root};
 use crate::tool::{ToolError, ToolResult};
 
 use super::error::{tool_error, FsErrorCode};
 
 use super::FsContext;
-
-fn json_str<'a>(params: &'a Value, key: &str) -> Result<&'a str, ToolError> {
-    params.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
-        tool_error(
-            FsErrorCode::InvalidPath,
-            format!("missing or invalid `{key}`"),
-        )
-    })
-}
 
 /// Optional non-negative integer only: JSON must be an integer (`u64` / non-negative `i64`), not a float.
 fn json_u64_integer_opt(params: &Value, key: &str) -> Result<Option<u64>, ToolError> {
@@ -40,13 +32,6 @@ fn json_u64_integer_opt(params: &Value, key: &str) -> Result<Option<u64>, ToolEr
         FsErrorCode::InvalidPath,
         format!("`{key}` must be a non-negative JSON integer"),
     ))
-}
-
-fn ok_data(data: Value) -> Value {
-    json!({
-        "success": true,
-        "data": data,
-    })
 }
 
 fn resolve(ctx: &FsContext, user: &str) -> Result<PathBuf, ToolError> {
@@ -299,16 +284,6 @@ pub(crate) fn op_copy_file(ctx: &FsContext, params: &Value) -> ToolResult {
         "source": src_abs,
         "destination": dst_abs,
     })))
-}
-
-/// Run an fs operation in a blocking task (std::fs).
-pub(crate) async fn run_blocking<F>(f: F) -> ToolResult
-where
-    F: FnOnce() -> ToolResult + Send + 'static,
-{
-    tokio::task::spawn_blocking(f)
-        .await
-        .map_err(crate::tool::join_blocking_error)?
 }
 
 #[cfg(test)]

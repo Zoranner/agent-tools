@@ -1,6 +1,5 @@
 pub mod tool;
 
-#[cfg(any(feature = "fs", feature = "md", feature = "git"))]
 mod core;
 
 pub use tool::{Tool, ToolError, ToolResult};

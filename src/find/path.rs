@@ -1,35 +1,9 @@
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
+use crate::core::path::combine_and_normalize;
 use crate::tool::ToolError;
 
 use super::error::{tool_error, FindErrorCode};
-
-/// Lexical normalization: collapse `.` / `..` without touching the filesystem.
-pub(crate) fn normalize_path(path: &Path) -> PathBuf {
-    let mut out = PathBuf::new();
-    for component in path.components() {
-        match component {
-            Component::Prefix(_) | Component::RootDir => {
-                out.push(component.as_os_str());
-            }
-            Component::CurDir => {}
-            Component::ParentDir => {
-                let _ = out.pop();
-            }
-            Component::Normal(part) => out.push(part),
-        }
-    }
-    out
-}
-
-pub(crate) fn combine_and_normalize(base: &Path, user: &Path) -> PathBuf {
-    let combined = if user.is_absolute() {
-        user.to_path_buf()
-    } else {
-        base.join(user)
-    };
-    normalize_path(&combined)
-}
 
 /// Resolve the directory (or single file) to scan under.
 pub(crate) fn resolve_find_root(

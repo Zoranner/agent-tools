@@ -6,28 +6,13 @@ use regex::RegexBuilder;
 use serde_json::{json, Value};
 use walkdir::WalkDir;
 
+use crate::core::json::{json_str, ok_data};
 use crate::tool::{ToolError, ToolResult};
 
 use super::error::{tool_error, FindErrorCode};
 
 use super::path::{display_path_relative, resolve_find_root};
 use super::FindContext;
-
-fn ok_data(data: Value) -> Value {
-    json!({
-        "success": true,
-        "data": data,
-    })
-}
-
-fn json_str<'a>(params: &'a Value, key: &str) -> Result<&'a str, ToolError> {
-    params.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
-        tool_error(
-            FindErrorCode::InvalidPath,
-            format!("missing or invalid `{key}`"),
-        )
-    })
-}
 
 fn json_str_opt<'a>(params: &'a Value, key: &str) -> Option<&'a str> {
     params
@@ -165,17 +150,4 @@ pub(crate) fn op_glob_search(ctx: &FindContext, params: &Value) -> ToolResult {
     });
 
     Ok(ok_data(json!({ "files": files })))
-}
-
-/// Run find work on the blocking pool (walkdir + file reads).
-pub(crate) async fn run_blocking<F>(f: F) -> ToolResult
-where
-    F: FnOnce() -> ToolResult + Send + 'static,
-{
-    tokio::task::spawn_blocking(f).await.map_err(|e| {
-        tool_error(
-            FindErrorCode::InvalidPath,
-            format!("blocking task failed: {e}"),
-        )
-    })?
 }

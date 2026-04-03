@@ -4,27 +4,12 @@ use chrono::{TimeZone, Utc};
 use git2::{DiffFormat, DiffOptions, Repository, Signature, Status, StatusOptions};
 use serde_json::{json, Value};
 
+use crate::core::json::{json_str, ok_data};
 use crate::core::path::combine_and_normalize;
 use crate::tool::{ToolError, ToolResult};
 
 use super::error::{map_git_err, tool_error, GitErrorCode};
 use super::GitContext;
-
-fn ok_data(data: Value) -> Value {
-    json!({
-        "success": true,
-        "data": data,
-    })
-}
-
-fn json_str<'a>(params: &'a Value, key: &str) -> Result<&'a str, ToolError> {
-    params.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
-        tool_error(
-            GitErrorCode::GitError,
-            format!("missing or invalid `{key}`"),
-        )
-    })
-}
 
 fn repo_logical_path(ctx: &GitContext, path: Option<&str>) -> PathBuf {
     match path.map(str::trim).filter(|s| !s.is_empty()) {
@@ -209,13 +194,4 @@ pub(crate) fn op_git_log(ctx: &GitContext, params: &Value) -> ToolResult {
         }));
     }
     Ok(ok_data(json!({ "commits": commits })))
-}
-
-pub(crate) async fn run_blocking<F>(f: F) -> ToolResult
-where
-    F: FnOnce() -> ToolResult + Send + 'static,
-{
-    tokio::task::spawn_blocking(f)
-        .await
-        .map_err(crate::tool::join_blocking_error)?
 }

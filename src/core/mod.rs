@@ -1,7 +1,11 @@
 //! 库内部通用逻辑：供多个工具 feature 复用，**不**作为对外 API 暴露。
 //!
-//! 子模块按职责划分（例如 [`path`] 负责工作区根目录下的路径解析与沙箱约束）。
-//!
-//! 整个 `core` 由根 `lib.rs` 按 feature 条件编译，避免无依赖 feature 时编进空壳。
+//! - [`json`]：成功响应外壳、通用 `string` 参数解析
+//! - [`blocking`]：`spawn_blocking` 包装
+//! - [`path`]：工作区根路径与沙箱（仅在有文件类/路径类 feature 时编译）
 
+pub(crate) mod blocking;
+pub(crate) mod json;
+
+#[cfg(any(feature = "fs", feature = "md", feature = "git", feature = "find"))]
 pub(crate) mod path;

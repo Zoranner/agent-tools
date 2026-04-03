@@ -3,9 +3,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde_json::{json, Value};
 
+use crate::core::blocking::run_blocking;
 use crate::{Tool, ToolResult};
 
-use super::ops::{self, run_blocking};
+use super::ops;
 use super::FsContext;
 
 macro_rules! fs_tool {

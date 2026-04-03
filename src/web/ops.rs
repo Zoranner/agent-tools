@@ -1,26 +1,11 @@
 use reqwest::Url;
 use serde_json::{json, Value};
 
+use crate::core::json::{json_str, ok_data};
 use crate::tool::{ToolError, ToolResult};
 
 use super::error::{tool_error, WebErrorCode};
 use super::WebContext;
-
-fn ok_data(data: Value) -> Value {
-    json!({
-        "success": true,
-        "data": data,
-    })
-}
-
-fn json_str<'a>(params: &'a Value, key: &str) -> Result<&'a str, ToolError> {
-    params.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
-        tool_error(
-            WebErrorCode::NetworkError,
-            format!("missing or invalid `{key}`"),
-        )
-    })
-}
 
 /// Non-negative limit: JSON integer or whole-number float, capped at `max`.
 fn json_limit(params: &Value, default: u64, max: u64) -> Result<u64, ToolError> {

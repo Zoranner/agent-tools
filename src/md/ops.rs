@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use serde_json::{json, Value};
 
+use crate::core::json::{json_str, ok_data};
 use crate::core::path::{map_io_error, resolve_against_workspace_root};
 use crate::tool::{ToolError, ToolResult};
 
@@ -10,22 +11,6 @@ use super::error::{tool_error, MdErrorCode};
 
 use super::markdown::{document_stats, extract_toc};
 use super::MdContext;
-
-fn ok_data(data: Value) -> Value {
-    json!({
-        "success": true,
-        "data": data,
-    })
-}
-
-fn json_str<'a>(params: &'a Value, key: &str) -> Result<&'a str, ToolError> {
-    params.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
-        tool_error(
-            MdErrorCode::InvalidPath,
-            format!("missing or invalid `{key}`"),
-        )
-    })
-}
 
 fn resolve_path(ctx: &MdContext, user: &str) -> Result<PathBuf, ToolError> {
     resolve_against_workspace_root(&ctx.root_canonical, ctx.allow_outside_root, user)
@@ -68,13 +53,4 @@ pub(crate) fn op_markdown_stats(ctx: &MdContext, params: &Value) -> ToolResult {
         "headings": stats.headings,
         "lines": stats.lines,
     })))
-}
-
-pub(crate) async fn run_blocking<F>(f: F) -> ToolResult
-where
-    F: FnOnce() -> ToolResult + Send + 'static,
-{
-    tokio::task::spawn_blocking(f)
-        .await
-        .map_err(crate::tool::join_blocking_error)?
 }
