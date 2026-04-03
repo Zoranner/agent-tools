@@ -1,9 +1,16 @@
 //! 库内部通用逻辑：供多个工具 feature 复用，**不**作为对外 API 暴露。
 //!
 //! - [`json`]：成功响应外壳、通用 `string` 参数解析
-//! - [`blocking`]：`spawn_blocking` 包装
+//! - [`blocking`]：`spawn_blocking` 包装（仅被阻塞型工具 feature 使用）
 //! - [`path`]：工作区根路径与沙箱（仅在有文件类/路径类 feature 时编译）
 
+#[cfg(any(
+    feature = "fs",
+    feature = "find",
+    feature = "md",
+    feature = "git",
+    feature = "memory",
+))]
 pub(crate) mod blocking;
 pub(crate) mod json;
 

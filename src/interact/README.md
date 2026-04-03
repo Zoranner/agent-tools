@@ -4,6 +4,8 @@
 
 实现源码：[mod.rs](mod.rs)
 
+实际提问、确认、通知的 I/O 由宿主注入 [`InteractBackend`](mod.rs)（终端、桌面、LSP、MCP 等）。[`InteractContext::new`](mod.rs) 传入 `Arc<dyn InteractBackend>`；若暂时不接宿主，可用 [`InteractContext::unsupported`](mod.rs)（`ask` / `confirm` 会报错，`notify` 返回 `sent: false`）。单元测试可使用 [`StubInteractBackend`](backends/mod.rs)。
+
 ## `ask`
 
 向用户提问，等待并返回回答。
@@ -11,8 +13,8 @@
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `question` | `string` | 是 | 问题内容 |
-| `options` | `string[]` | 否 | 候选选项，提供时为单选，不提供时为自由回答 |
-| `timeout` | `number` | 否 | 等待超时秒数，超时返回错误 |
+| `options` | `string[]` | 否 | 非空时为单选；缺省或空数组为自由回答 |
+| `timeout` | `number` | 否 | 超时秒数，由后端解释并实现 |
 
 **返回**
 
@@ -30,7 +32,7 @@
 |------|------|------|------|
 | `message` | `string` | 是 | 确认提示内容 |
 | `default` | `boolean` | 否 | 超时或无响应时的默认值，默认 `false` |
-| `timeout` | `number` | 否 | 等待超时秒数 |
+| `timeout` | `number` | 否 | 超时秒数 |
 
 **返回**
 
@@ -53,10 +55,14 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `sent` | `boolean` | 是否发送成功 |
+| `sent` | `boolean` | 后端是否报告发送成功（无后端时多为 `false`） |
 
 ## 错误码
 
-交互类工具由宿主/runtime 实现具体 I/O（如超时、用户取消）。当前 [`../error.rs`](../error.rs) 中的 `ToolErrorCode` **没有**交互专用枚举项；宿主可将超时、拒绝等映射为自定义 `message`，或在扩展 crate 后增加新码。
-
-若参数校验失败，实现上也可能复用与其它模块相同的通用码（以实际实现为准）。
+| 错误码 | 说明 |
+|--------|------|
+| `INVALID_PATH` | 必填字符串参数缺失或类型错误（见库内 `core::json`） |
+| `INTERACT_NOT_SUPPORTED` | 当前上下文未配置可用的 `InteractBackend`（默认 `unsupported` 下 `ask` / `confirm`） |
+| `INTERACT_TIMEOUT` | 自定义后端在超时时可直接构造 `ToolError`，`code` 为该字符串 |
+| `INTERACT_CANCELLED` | 用户取消等，同上，`code` 为该字符串 |
+| `INTERACT_INVALID_PARAM` | 如 `level` 非法枚举值 |

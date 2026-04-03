@@ -1,6 +1,6 @@
 # Agent Tools
 
-面向 AI 智能体的 Rust 工具库，为 LLM 驱动的应用提供文件系统操作、工作区查找、网络获取、文档分析、版本控制和跨会话记忆能力。每个工具通过 JSON Schema 描述，与 OpenAI Function Calling / Anthropic Tool Use 等主流格式直接兼容。
+面向 AI 智能体的 Rust 工具库，为 LLM 驱动的应用提供文件系统操作、工作区查找、网络获取、文档分析、版本控制、跨会话记忆与可插拔人机交互能力。每个工具通过 JSON Schema 描述，与 OpenAI Function Calling / Anthropic Tool Use 等主流格式直接兼容。
 
 ## 快速开始
 
