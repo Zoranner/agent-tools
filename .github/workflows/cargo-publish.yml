@@ -24,15 +24,7 @@ jobs:
         shell: bash
         run: |
           tag_version="${GITHUB_REF_NAME#v}"
-          cargo_version="$(
-            python - <<'PY'
-            import tomllib
-            from pathlib import Path
-
-            with Path("Cargo.toml").open("rb") as f:
-                print(tomllib.load(f)["package"]["version"])
-            PY
-          )"
+          cargo_version="$(python -c 'import tomllib; from pathlib import Path; print(tomllib.load(Path("Cargo.toml").open("rb"))["package"]["version"])')"
 
           if [ "$cargo_version" != "$tag_version" ]; then
             echo "::error title=Version mismatch::Cargo.toml version '$cargo_version' does not match tag '$GITHUB_REF_NAME'"
