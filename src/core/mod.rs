@@ -13,6 +13,17 @@
     feature = "todo",
 ))]
 pub(crate) mod blocking;
+
+#[cfg(any(
+    feature = "fs",
+    feature = "find",
+    feature = "web",
+    feature = "md",
+    feature = "git",
+    feature = "memory",
+    feature = "todo",
+    feature = "interact",
+))]
 pub(crate) mod json;
 
 #[cfg(any(

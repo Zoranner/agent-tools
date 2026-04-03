@@ -14,6 +14,7 @@ This folder indexes human-written docs for the **agentool** crate. API details a
 
 ## Conventions
 
+- **Cargo features** map to optional dependencies (see root `Cargo.toml`): enable only the tool modules you use to keep compile time and transitive deps small.
 - **Default language** for top-level and feature READMEs is **English** (`README.md`).
 - **Chinese** variants are **`README.zh.md`** in the same directory, linked from the English page.
 - Error `code` strings are stable API; see each feature’s `error.rs` and its README tables.

@@ -12,13 +12,6 @@ pub struct ToolError {
 
 pub type ToolResult = Result<Value, ToolError>;
 
-pub fn join_blocking_error(err: tokio::task::JoinError) -> ToolError {
-    ToolError {
-        code: "INVALID_PATH".into(),
-        message: format!("blocking task failed: {err}"),
-    }
-}
-
 #[async_trait]
 pub trait Tool: Send + Sync {
     fn name(&self) -> &str;

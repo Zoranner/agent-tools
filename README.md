@@ -21,6 +21,8 @@ All published features:
 agentool = { version = "0.1", features = ["full"] }
 ```
 
+Heavy crates (`tokio`, `reqwest`, `git2`, `walkdir`, `regex`, `chrono`, …) are **optional**: each feature in `Cargo.toml` pulls only what it needs. The always-on footprint is `async-trait`, `serde_json`, and `thiserror` (plus the `Tool` trait when you enable no features).
+
 **Example: write and read a file**
 
 ```rust

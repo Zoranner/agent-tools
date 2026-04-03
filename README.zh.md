@@ -21,6 +21,8 @@ agentool = { version = "0.1", features = ["fs", "find", "web", "git"] }
 agentool = { version = "0.1", features = ["full"] }
 ```
 
+`tokio`、`reqwest`、`git2`、`walkdir`、`regex`、`chrono` 等较重依赖均为 **可选**，由 `Cargo.toml` 里对应 feature 按需启用；不启用任何工具 feature 时，常驻依赖主要是 `async-trait`、`serde_json`、`thiserror` 与核心 `Tool` trait。
+
 **示例：写入并读取文件**
 
 ```rust

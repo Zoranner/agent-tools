@@ -9,33 +9,51 @@ description = "Rust toolkit for AI agents: JSON Schema-defined tools for workspa
 
 [features]
 default = []
-fs = []
-find = []
-web = []
-md = []
-git = []
-memory = []
+fs = ["dep:tokio"]
+find = ["dep:globset", "dep:regex", "dep:tokio", "dep:walkdir"]
+web = ["dep:htmd", "dep:regex", "dep:reqwest", "dep:serde"]
+md = ["dep:regex", "dep:serde", "dep:tokio"]
+git = ["dep:chrono", "dep:git2", "dep:tokio"]
+memory = ["dep:chrono", "dep:tokio", "dep:walkdir"]
 exec = []
 code = []
 office = []
 browser = []
 design = []
 gui = []
-todo = ["dep:uuid"]
+todo = ["dep:chrono", "dep:serde", "dep:tokio", "dep:uuid"]
 interact = []
-full = ["fs", "find", "web", "md", "git", "memory", "exec", "code", "office", "browser", "design", "gui", "todo", "interact"]
+full = [
+    "fs",
+    "find",
+    "web",
+    "md",
+    "git",
+    "memory",
+    "exec",
+    "code",
+    "office",
+    "browser",
+    "design",
+    "gui",
+    "todo",
+    "interact",
+]
 
 [dependencies]
 async-trait = "0.1"
-chrono = { version = "0.4", features = ["serde"] }
-git2 = "0.19"
-globset = "0.4"
-htmd = "0.1"
-regex = "1"
-reqwest = { version = "0.12", features = ["json"] }
-serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
-tokio = { version = "1", features = ["full"] }
-walkdir = "2"
+chrono = { version = "0.4", optional = true }
+git2 = { version = "0.19", optional = true }
+globset = { version = "0.4", optional = true }
+htmd = { version = "0.1", optional = true }
+regex = { version = "1", optional = true }
+reqwest = { version = "0.12", features = ["json"], optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+tokio = { version = "1", features = ["macros", "rt"], optional = true }
+walkdir = { version = "2", optional = true }
 uuid = { version = "1", features = ["v4"], optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
