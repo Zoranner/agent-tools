@@ -10,7 +10,7 @@ description = "A toolkit for document editing agents"
 [features]
 default = []
 fs = []
-search = []
+find = []
 web = []
 md = []
 git = []
@@ -23,7 +23,7 @@ design = []
 gui = []
 todo = []
 interact = []
-full = ["fs", "search", "web", "md", "git", "memory", "exec", "code", "office", "browser", "design", "gui", "todo", "interact"]
+full = ["fs", "find", "web", "md", "git", "memory", "exec", "code", "office", "browser", "design", "gui", "todo", "interact"]
 
 [dependencies]
 async-trait = "0.1"

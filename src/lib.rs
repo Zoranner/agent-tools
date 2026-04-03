@@ -9,8 +9,8 @@ pub type ToolResult = Result<serde_json::Value, ToolError>;
 #[cfg(feature = "fs")]
 pub mod fs;
 
-#[cfg(feature = "search")]
-pub mod search;
+#[cfg(feature = "find")]
+pub mod find;
 
 #[cfg(feature = "web")]
 pub mod web;
