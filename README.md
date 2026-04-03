@@ -53,7 +53,7 @@ async fn example() -> Result<(), agentool::ToolError> {
 | `md` | `extract_toc` / `markdown_stats` |
 | `git` | `git_status` / `git_diff` / `git_commit` / `git_log` |
 | `memory` | `memory_write` / `memory_update` / `memory_read` / `memory_search` |
-| `interact` | `ask` / `confirm` / `notify` |
+| `interact` | `interact_ask` / `interact_confirm` / `interact_notify` |
 | `todo` | `todo_add` / `todo_list` / `todo_update` / `todo_remove` |
 | `full` | 全部已发布模块 |
 

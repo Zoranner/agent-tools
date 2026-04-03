@@ -4,9 +4,9 @@
 
 实现源码：[mod.rs](mod.rs)
 
-实际提问、确认、通知的 I/O 由宿主注入 [`InteractBackend`](mod.rs)（终端、桌面、LSP、MCP 等）。[`InteractContext::new`](mod.rs) 传入 `Arc<dyn InteractBackend>`；若暂时不接宿主，可用 [`InteractContext::unsupported`](mod.rs)（`ask` / `confirm` 会报错，`notify` 返回 `sent: false`）。单元测试可使用 [`StubInteractBackend`](backends/mod.rs)。
+实际提问、确认、通知的 I/O 由宿主注入 [`InteractBackend`](mod.rs)（终端、桌面、LSP、MCP 等）。[`InteractContext::new`](mod.rs) 传入 `Arc<dyn InteractBackend>`；若暂时不接宿主，可用 [`InteractContext::unsupported`](mod.rs)（`interact_ask` / `interact_confirm` 会报错，`interact_notify` 返回 `sent: false`）。单元测试可使用 [`StubInteractBackend`](backends/mod.rs)。
 
-## `ask`
+## `interact_ask`
 
 向用户提问，等待并返回回答。
 
@@ -24,7 +24,7 @@
 
 ---
 
-## `confirm`
+## `interact_confirm`
 
 向用户请求确认，等待是/否结果。
 
@@ -42,7 +42,7 @@
 
 ---
 
-## `notify`
+## `interact_notify`
 
 向用户发送通知，无需等待回复。
 
@@ -62,7 +62,7 @@
 | 错误码 | 说明 |
 |--------|------|
 | `INVALID_PATH` | 必填字符串参数缺失或类型错误（见库内 `core::json`） |
-| `INTERACT_NOT_SUPPORTED` | 当前上下文未配置可用的 `InteractBackend`（默认 `unsupported` 下 `ask` / `confirm`） |
+| `INTERACT_NOT_SUPPORTED` | 当前上下文未配置可用的 `InteractBackend`（默认 `unsupported` 下 `interact_ask` / `interact_confirm`） |
 | `INTERACT_TIMEOUT` | 自定义后端在超时时可直接构造 `ToolError`，`code` 为该字符串 |
 | `INTERACT_CANCELLED` | 用户取消等，同上，`code` 为该字符串 |
 | `INTERACT_INVALID_PARAM` | 如 `level` 非法枚举值 |

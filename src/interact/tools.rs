@@ -47,8 +47,8 @@ macro_rules! interact_tool {
 }
 
 interact_tool!(
-    AskTool,
-    "ask",
+    InteractAskTool,
+    "interact_ask",
     "Ask the user a question and wait for a reply. Requires an InteractBackend in InteractContext (CLI, UI, etc.). Optional `options` turns this into single-choice; `timeout` is in seconds and is enforced by the backend.",
     schema = json!({
         "type": "object",
@@ -67,8 +67,8 @@ interact_tool!(
 );
 
 interact_tool!(
-    ConfirmTool,
-    "confirm",
+    InteractConfirmTool,
+    "interact_confirm",
     "Ask the user for yes/no confirmation. `default` is used when the backend times out or cannot obtain an answer (default false). `timeout` is in seconds.",
     schema = json!({
         "type": "object",
@@ -83,8 +83,8 @@ interact_tool!(
 );
 
 interact_tool!(
-    NotifyTool,
-    "notify",
+    InteractNotifyTool,
+    "interact_notify",
     "Send a one-way notification to the user (no reply). Returns whether the backend reported successful delivery.",
     schema = json!({
         "type": "object",
@@ -103,8 +103,8 @@ interact_tool!(
 
 pub fn all_tools(ctx: Arc<InteractContext>) -> Vec<Arc<dyn Tool>> {
     vec![
-        Arc::new(AskTool::new(ctx.clone())),
-        Arc::new(ConfirmTool::new(ctx.clone())),
-        Arc::new(NotifyTool::new(ctx)),
+        Arc::new(InteractAskTool::new(ctx.clone())),
+        Arc::new(InteractConfirmTool::new(ctx.clone())),
+        Arc::new(InteractNotifyTool::new(ctx)),
     ]
 }

@@ -1,7 +1,7 @@
-//! Human-in-the-loop tools: [`ask`](AskTool), [`confirm`](ConfirmTool), [`notify`](NotifyTool).
+//! Human-in-the-loop tools: [`interact_ask`](InteractAskTool), [`interact_confirm`](InteractConfirmTool), [`interact_notify`](InteractNotifyTool).
 //!
 //! Actual I/O is provided by [`InteractBackend`]; use [`InteractContext::unsupported`] only when
-//! you will not call `ask`/`confirm`, or inject [`StubInteractBackend`](backends::StubInteractBackend) for tests.
+//! you will not call `interact_ask` / `interact_confirm`, or inject [`StubInteractBackend`](backends::StubInteractBackend) for tests.
 
 mod backend;
 mod backends;
@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 pub use backend::{InteractBackend, NotifyLevel, UnsupportedInteractBackend};
 pub use backends::StubInteractBackend;
-pub use tools::{all_tools, AskTool, ConfirmTool, NotifyTool};
+pub use tools::{all_tools, InteractAskTool, InteractConfirmTool, InteractNotifyTool};
 
 /// Holds the [`InteractBackend`] used by all interact tools.
 #[derive(Clone)]
@@ -26,7 +26,7 @@ impl InteractContext {
         Self { backend }
     }
 
-    /// [`UnsupportedInteractBackend`]: `ask` / `confirm` error; `notify` returns `sent: false`.
+    /// [`UnsupportedInteractBackend`]: `interact_ask` / `interact_confirm` error; `interact_notify` returns `sent: false`.
     pub fn unsupported() -> Self {
         Self {
             backend: Arc::new(UnsupportedInteractBackend),
@@ -55,18 +55,24 @@ mod tests {
         let ctx = Arc::new(InteractContext::unsupported());
         let tools = all_tools(ctx);
 
-        let ask = tools.iter().find(|t| t.name() == "ask").unwrap();
+        let ask = tools.iter().find(|t| t.name() == "interact_ask").unwrap();
         let e = ask.execute(json!({ "question": "hi?" })).await.unwrap_err();
         assert_eq!(e.code, "INTERACT_NOT_SUPPORTED");
 
-        let confirm = tools.iter().find(|t| t.name() == "confirm").unwrap();
+        let confirm = tools
+            .iter()
+            .find(|t| t.name() == "interact_confirm")
+            .unwrap();
         let e2 = confirm
             .execute(json!({ "message": "sure?" }))
             .await
             .unwrap_err();
         assert_eq!(e2.code, "INTERACT_NOT_SUPPORTED");
 
-        let notify = tools.iter().find(|t| t.name() == "notify").unwrap();
+        let notify = tools
+            .iter()
+            .find(|t| t.name() == "interact_notify")
+            .unwrap();
         let n = notify
             .execute(json!({ "message": "ping", "level": "warning" }))
             .await
@@ -83,15 +89,21 @@ mod tests {
         })));
         let tools = all_tools(ctx);
 
-        let ask = tools.iter().find(|t| t.name() == "ask").unwrap();
+        let ask = tools.iter().find(|t| t.name() == "interact_ask").unwrap();
         let a = ask.execute(json!({ "question": "color?" })).await.unwrap();
         assert_eq!(a["data"]["answer"], "blue");
 
-        let confirm = tools.iter().find(|t| t.name() == "confirm").unwrap();
+        let confirm = tools
+            .iter()
+            .find(|t| t.name() == "interact_confirm")
+            .unwrap();
         let c = confirm.execute(json!({ "message": "go?" })).await.unwrap();
         assert_eq!(c["data"]["confirmed"], false);
 
-        let notify = tools.iter().find(|t| t.name() == "notify").unwrap();
+        let notify = tools
+            .iter()
+            .find(|t| t.name() == "interact_notify")
+            .unwrap();
         let n = notify.execute(json!({ "message": "done" })).await.unwrap();
         assert_eq!(n["data"]["sent"], true);
     }
@@ -101,7 +113,7 @@ mod tests {
         let ctx = Arc::new(InteractContext::unsupported());
         let notify = all_tools(ctx)
             .into_iter()
-            .find(|t| t.name() == "notify")
+            .find(|t| t.name() == "interact_notify")
             .unwrap();
         let e = notify
             .execute(json!({ "message": "x", "level": "loud" }))
