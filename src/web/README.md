@@ -2,7 +2,51 @@
 
 [← 返回仓库说明](../../README.md)
 
-实现源码：[mod.rs](mod.rs)
+实现源码：[mod.rs](mod.rs)、[backend.rs](backend.rs)、[types.rs](types.rs)、[backends/](backends/)、[ops.rs](ops.rs)、[tools.rs](tools.rs)
+
+**`WebContext` 与可插拔后端**
+
+- `WebContext::new()?`：默认 `reqwest::Client`（约 30s 超时、15s 连接超时、最多 8 次重定向、`agentool` User-Agent）+ [`DuckDuckGoSearchBackend`](backends/duckduckgo.rs) + [`DirectFetchBackend`](backends/direct_fetch.rs)。
+- `WebContext::with_client(client)`：只换 HTTP 客户端，后端仍为默认。
+- `WebContextBuilder`：`.client(...)`、`.search(...)` / `.search_backend(Arc<dyn WebSearchBackend>)`、`.fetch(...)` / `.fetch_backend(Arc<dyn WebFetchBackend>)` 任意组合；`WebContext::from_parts(client, search, fetch)` 亦可一次传入。
+- 实现 [`WebSearchBackend`](backend.rs) / [`WebFetchBackend`](backend.rs)，返回 [`WebSearchResult`](types.rs) / [`WebFetchResult`](types.rs)，错误统一为 [`ToolError`](../error.rs)（多为 `NETWORK_ERROR`）。
+
+自定义搜索示例（实现 trait 后用 `WebContextBuilder::new().search(MySearch).build()?`）：
+
+```rust
+use std::sync::Arc;
+use async_trait::async_trait;
+use reqwest::Client;
+use agentool::web::{WebContextBuilder, WebSearchBackend, WebSearchResult, all_tools};
+use agentool::ToolError;
+
+struct MySearch;
+
+#[async_trait]
+impl WebSearchBackend for MySearch {
+    async fn search(
+        &self,
+        _client: &Client,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<WebSearchResult>, ToolError> {
+        // 调用 Brave / Tavily / 自建 SearXNG 等
+        let _ = (query, limit);
+        Ok(vec![])
+    }
+}
+
+let ctx = Arc::new(WebContextBuilder::new().search(MySearch).build()?);
+let _tools = all_tools(ctx);
+```
+
+**默认搜索（DuckDuckGo）**
+
+`DuckDuckGoSearchBackend`：Instant Answer JSON；不足时 POST HTML 结果页并解析 `result__a`（含 `uddg=` 解码）。页面结构可能变更，生产环境建议换付费 API 或自建索引。
+
+**默认抓取（直连 + htmd）**
+
+`DirectFetchBackend`：`web_fetch` 侧仅允许 `http` / `https`（在 `ops` 中校验）；下载 HTML 后经 `htmd` 转 Markdown。可换为调用 Jina Reader、无头浏览器等自定义 [`WebFetchBackend`](backend.rs)。
 
 ## `web_search`
 
