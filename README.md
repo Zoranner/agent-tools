@@ -102,19 +102,3 @@ async fn example() -> Result<(), agentool::ToolError> {
 ```
 
 在 Rust 中，`Tool::execute` 返回 `Result<serde_json::Value, ToolError>`：成功时 `Ok` 值已包含 `success / data` 外壳；失败时由宿主/runtime 将 `Err(ToolError)` 映射为 `success: false` 的 JSON。
-
-### 错误码
-
-失败时 `error.code` 为稳定的大写下划线字符串。完整枚举定义见 [`src/error.rs`](src/error.rs) 中的 `ToolErrorCode`。
-
-各工具集**可能出现的错误**写在对应目录 `README.md` 的「错误码」一节：
-
-| Feature | 错误说明 |
-|---------|----------|
-| `fs` | [src/fs/README.md#错误码](src/fs/README.md#错误码) |
-| `find` | [src/find/README.md#错误码](src/find/README.md#错误码) |
-| `web` | [src/web/README.md#错误码](src/web/README.md#错误码) |
-| `md` | [src/md/README.md#错误码](src/md/README.md#错误码) |
-| `git` | [src/git/README.md#错误码](src/git/README.md#错误码) |
-| `memory` | [src/memory/README.md#错误码](src/memory/README.md#错误码) |
-| `interact` | [src/interact/README.md#错误码](src/interact/README.md#错误码) |
