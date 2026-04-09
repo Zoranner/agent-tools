@@ -4,7 +4,7 @@
 
 [中文](README.zh.md) | English
 
-A Rust toolkit for AI agents: workspace file I/O, search, web fetch, Markdown helpers, Git, cross-session memory, pluggable human-in-the-loop I/O, and persistent todos. Each tool is described with JSON Schema and lines up with OpenAI Function Calling, Anthropic Tool Use, and similar formats.
+A Rust toolkit for AI agents: workspace file I/O, search, web fetch, Markdown helpers, Git, cross-session memory, pluggable human-in-the-loop I/O, persistent todos, and a SQLite-backed task store with steps, runs, locks, checkpoints, and artifacts. Each tool is described with JSON Schema and lines up with OpenAI Function Calling, Anthropic Tool Use, and similar formats.
 
 ## Quick start
 
@@ -61,6 +61,7 @@ async fn example() -> Result<(), agentool::ToolError> {
 | `memory` | `memory_write` / `memory_update` / `memory_read` / `memory_search` |
 | `interact` | `interact_ask` / `interact_confirm` / `interact_notify` |
 | `todo` | `todo_add` / `todo_list` / `todo_update` / `todo_remove` |
+| `task` | `task_create` / `task_list` / `task_get` / `task_update` / `task_delete` / `task_start_run` / `task_end_run` / `task_append_step` / `task_update_step` / `task_open_checkpoint` / `task_close_checkpoint` / `task_acquire_lock` / `task_release_lock` / `task_add_artifact` |
 | `full` | All published modules |
 
 > `exec` / `code` / `office` / `browser` / `design` / `gui` are planned but not shipped yet.
@@ -79,6 +80,7 @@ Each feature has a **`README.md`** (English) next to `mod.rs` under `src/<featur
 | `memory` | [src/memory/README.md](src/memory/README.md) | [src/memory/README.zh.md](src/memory/README.zh.md) |
 | `interact` | [src/interact/README.md](src/interact/README.md) | [src/interact/README.zh.md](src/interact/README.zh.md) |
 | `todo` | [src/todo/README.md](src/todo/README.md) | [src/todo/README.zh.md](src/todo/README.zh.md) |
+| `task` | [src/task/README.md](src/task/README.md) | [src/task/README.zh.md](src/task/README.zh.md) |
 
 Placeholder modules: [src/exec/README.md](src/exec/README.md) · [src/code/README.md](src/code/README.md) · [src/office/README.md](src/office/README.md) · [src/browser/README.md](src/browser/README.md) · [src/design/README.md](src/design/README.md) · [src/gui/README.md](src/gui/README.md) (each has a `README.zh.md`).
 
