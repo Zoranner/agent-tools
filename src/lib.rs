@@ -43,8 +43,5 @@ pub mod gui;
 #[cfg(feature = "todo")]
 pub mod todo;
 
-#[cfg(feature = "task")]
-pub mod task;
-
 #[cfg(feature = "interact")]
 pub mod interact;

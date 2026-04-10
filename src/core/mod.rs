@@ -11,7 +11,6 @@
     feature = "git",
     feature = "memory",
     feature = "todo",
-    feature = "task",
 ))]
 pub(crate) mod blocking;
 
@@ -23,7 +22,6 @@ pub(crate) mod blocking;
     feature = "git",
     feature = "memory",
     feature = "todo",
-    feature = "task",
     feature = "interact",
 ))]
 pub(crate) mod json;
