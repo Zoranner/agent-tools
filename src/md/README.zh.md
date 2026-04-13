@@ -6,7 +6,7 @@
 
 实现源码：[mod.rs](mod.rs)
 
-## `extract_toc`
+## `toc_extract`
 
 提取 Markdown 文档的 **ATX 标题**（`#` … `######`）目录；**围栏代码块**（` ``` ` / `~~~`）内的行不计入目录。
 
@@ -28,7 +28,7 @@
 
 ---
 
-## `markdown_stats`
+## `markdown_inspect`
 
 统计 **非空白字符数**（字数）、段落数、ATX 标题数、总行数。`characters` / `paragraphs` **不包含围栏代码块**内文本；`headings` 仅统计 ATX 标题且同样忽略代码块；`lines` 为全文行数（含代码块与空行）。
 

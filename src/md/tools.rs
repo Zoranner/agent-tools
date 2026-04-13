@@ -49,7 +49,7 @@ macro_rules! md_tool {
 
 md_tool!(
     ExtractTocTool,
-    "extract_toc",
+    "toc_extract",
     "Extract ATX heading outline (# .. ######) from a Markdown file. Headings inside fenced code blocks are ignored. Paths resolve against the context root; sandbox mode keeps reads inside the workspace.",
     schema = json!({
         "type": "object",
@@ -63,7 +63,7 @@ md_tool!(
 
 md_tool!(
     MarkdownStatsTool,
-    "markdown_stats",
+    "markdown_inspect",
     "Non-whitespace character count, paragraph count (blank-line separated), ATX heading count, and line count for a Markdown file. Fenced code blocks are excluded from character and paragraph counts. Paths resolve like other workspace tools.",
     schema = json!({
         "type": "object",

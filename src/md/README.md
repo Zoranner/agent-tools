@@ -6,7 +6,7 @@
 
 Sources: [mod.rs](mod.rs)
 
-## `extract_toc`
+## `toc_extract`
 
 Extract an **ATX heading** table of contents (`#` … `######`). Lines inside **fenced code blocks** (`` ``` `` / `~~~`) are ignored.
 
@@ -28,7 +28,7 @@ Path resolution matches `fs`: relative paths join to [`MdContext`](mod.rs) works
 
 ---
 
-## `markdown_stats`
+## `markdown_inspect`
 
 Counts **non-whitespace characters**, paragraphs, ATX headings, and total lines. `characters` / `paragraphs` **exclude fenced code blocks**; `headings` counts ATX headings outside fences; `lines` includes everything.
 

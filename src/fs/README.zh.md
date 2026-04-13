@@ -17,7 +17,7 @@
 
 ---
 
-## `read_file`
+## `file_read`
 
 读取文本文件内容，支持按行分页。
 
@@ -38,7 +38,7 @@
 
 ---
 
-## `write_file`
+## `file_write`
 
 写入文件；文件不存在时创建，已存在则覆盖。自动递归创建不存在的父目录。
 
@@ -55,7 +55,7 @@
 
 ---
 
-## `edit_file`
+## `file_edit`
 
 精确替换文件中的某段文本。`old_text` 必须在文件中**唯一**出现，且不得为空字符串。
 
@@ -73,7 +73,7 @@
 
 ---
 
-## `create_directory`
+## `directory_create`
 
 创建目录，支持递归创建多级目录。目录已存在时不报错。
 
@@ -89,7 +89,7 @@
 
 ---
 
-## `list_directory`
+## `directory_list`
 
 列出目录中的文件和子目录，结果按名称升序排序。
 
@@ -108,7 +108,7 @@
 
 ---
 
-## `delete_file`
+## `file_delete`
 
 删除普通文件。若目标是目录，返回 `INVALID_PATH`。
 
@@ -124,7 +124,7 @@
 
 ---
 
-## `move_file`
+## `file_move`
 
 移动或重命名普通文件。目标路径已存在时失败，自动创建目标路径的父目录。
 
@@ -144,7 +144,7 @@
 
 ---
 
-## `copy_file`
+## `file_copy`
 
 复制普通文件。目标路径已存在时失败，自动创建目标路径的父目录。
 
@@ -168,8 +168,8 @@
 |--------|------|
 | `FILE_NOT_FOUND` | 文件或目录不存在 |
 | `PERMISSION_DENIED` | 无读写权限 |
-| `FILE_ALREADY_EXISTS` | 目标路径已存在（如 `move_file` / `copy_file`） |
+| `FILE_ALREADY_EXISTS` | 目标路径已存在（如 `file_move` / `file_copy`） |
 | `DIRECTORY_NOT_EMPTY` | 目录非空等 I/O 语义错误（映射自系统错误） |
-| `PATTERN_NOT_FOUND` | `edit_file` 的 `old_text` 未找到 |
-| `PATTERN_NOT_UNIQUE` | `edit_file` 的 `old_text` 匹配到多处 |
+| `PATTERN_NOT_FOUND` | `file_edit` 的 `old_text` 未找到 |
+| `PATTERN_NOT_UNIQUE` | `file_edit` 的 `old_text` 匹配到多处 |
 | `INVALID_PATH` | 路径为空、非法、目标类型不符（如对目录调用 `delete_file`）、超出沙箱，或其它归一化/解析失败 |

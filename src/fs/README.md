@@ -17,7 +17,7 @@
 
 ---
 
-## `read_file`
+## `file_read`
 
 Read a text file with optional line-based paging.
 
@@ -38,7 +38,7 @@ Read a text file with optional line-based paging.
 
 ---
 
-## `write_file`
+## `file_write`
 
 Write a file; create if missing, overwrite if present. Missing parent directories are created.
 
@@ -55,7 +55,7 @@ Write a file; create if missing, overwrite if present. Missing parent directorie
 
 ---
 
-## `edit_file`
+## `file_edit`
 
 Replace one occurrence of `old_text`. It must be **unique** in the file and must not be empty.
 
@@ -73,7 +73,7 @@ Replace one occurrence of `old_text`. It must be **unique** in the file and must
 
 ---
 
-## `create_directory`
+## `directory_create`
 
 Create a directory (recursive). No error if it already exists.
 
@@ -89,7 +89,7 @@ Create a directory (recursive). No error if it already exists.
 
 ---
 
-## `list_directory`
+## `directory_list`
 
 List files and subdirectories, sorted by name ascending.
 
@@ -108,7 +108,7 @@ List files and subdirectories, sorted by name ascending.
 
 ---
 
-## `delete_file`
+## `file_delete`
 
 Delete a regular file. If the path is a directory, returns `INVALID_PATH`.
 
@@ -124,7 +124,7 @@ Delete a regular file. If the path is a directory, returns `INVALID_PATH`.
 
 ---
 
-## `move_file`
+## `file_move`
 
 Move or rename a file. Fails if the destination exists; creates parent dirs as needed.
 
@@ -144,7 +144,7 @@ Cross-volume moves fall back to copy + delete; if deleting the source fails, the
 
 ---
 
-## `copy_file`
+## `file_copy`
 
 Copy a file. Fails if the destination exists; creates parent dirs as needed.
 
@@ -168,8 +168,8 @@ Typical `error.code` values (see [`error.rs`](error.rs) `FsErrorCode`; I/O may a
 |------|---------|
 | `FILE_NOT_FOUND` | Missing file or directory |
 | `PERMISSION_DENIED` | Read/write not allowed |
-| `FILE_ALREADY_EXISTS` | Destination exists (`move_file` / `copy_file`) |
+| `FILE_ALREADY_EXISTS` | Destination exists (`file_move` / `file_copy`) |
 | `DIRECTORY_NOT_EMPTY` | Non-empty directory or similar I/O semantics |
-| `PATTERN_NOT_FOUND` | `old_text` not found in `edit_file` |
+| `PATTERN_NOT_FOUND` | `old_text` not found in `file_edit` |
 | `PATTERN_NOT_UNIQUE` | `old_text` matches more than once |
 | `INVALID_PATH` | Empty/invalid path, wrong type (e.g. delete on directory), sandbox violation, or normalization failure |

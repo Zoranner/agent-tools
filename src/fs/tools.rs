@@ -49,7 +49,7 @@ macro_rules! fs_tool {
 
 fs_tool!(
     ReadFileTool,
-    "read_file",
+    "file_read",
     "Read a text file with optional line offset and limit.",
     schema = json!({
         "type": "object",
@@ -73,7 +73,7 @@ fs_tool!(
 
 fs_tool!(
     WriteFileTool,
-    "write_file",
+    "file_write",
     "Write a file, creating parent directories if needed.",
     schema = json!({
         "type": "object",
@@ -88,7 +88,7 @@ fs_tool!(
 
 fs_tool!(
     EditFileTool,
-    "edit_file",
+    "file_edit",
     "Replace exactly one unique occurrence of old_text with new_text in a file.",
     schema = json!({
         "type": "object",
@@ -104,7 +104,7 @@ fs_tool!(
 
 fs_tool!(
     CreateDirectoryTool,
-    "create_directory",
+    "directory_create",
     "Create a directory recursively.",
     schema = json!({
         "type": "object",
@@ -118,7 +118,7 @@ fs_tool!(
 
 fs_tool!(
     ListDirectoryTool,
-    "list_directory",
+    "directory_list",
     "List entries in a directory.",
     schema = json!({
         "type": "object",
@@ -132,7 +132,7 @@ fs_tool!(
 
 fs_tool!(
     DeleteFileTool,
-    "delete_file",
+    "file_delete",
     "Delete a regular file (not a directory).",
     schema = json!({
         "type": "object",
@@ -146,7 +146,7 @@ fs_tool!(
 
 fs_tool!(
     MoveFileTool,
-    "move_file",
+    "file_move",
     "Move or rename a file, creating destination parent directories if needed.",
     schema = json!({
         "type": "object",
@@ -161,7 +161,7 @@ fs_tool!(
 
 fs_tool!(
     CopyFileTool,
-    "copy_file",
+    "file_copy",
     "Copy a file to a new path, creating destination parent directories if needed.",
     schema = json!({
         "type": "object",
