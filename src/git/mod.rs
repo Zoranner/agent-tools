@@ -1,7 +1,9 @@
-//! Git tools: [`git_status`](GitStatusTool), [`git_diff`](GitDiffTool), [`git_commit`](GitCommitTool), [`git_log`](GitLogTool).
+//! Git tools: [`git_status`](GitStatusTool), [`git_diff`](GitDiffTool), [`git_commit`](GitCommitTool), [`git_log`](GitLogTool),
+//! [`worktree_add`](WorktreeAddTool), [`worktree_list`](WorktreeListTool), [`worktree_remove`](WorktreeRemoveTool),
+//! [`worktree_lock`](WorktreeLockTool), [`worktree_unlock`](WorktreeUnlockTool).
 //!
-//! [`GitContext::default_repo_root`] is the directory used when `path` is omitted; relative `path`
-//! joins against it before [`git2::Repository::discover`].
+//! [`GitContext::default_repo_root`] is the directory used when `path`/`repo` is omitted; relative paths
+//! join against it before [`git2::Repository::discover`].
 
 mod error;
 mod ops;
@@ -9,7 +11,10 @@ mod tools;
 
 use std::path::PathBuf;
 
-pub use tools::{all_tools, GitCommitTool, GitDiffTool, GitLogTool, GitStatusTool};
+pub use tools::{
+    all_tools, GitCommitTool, GitDiffTool, GitLogTool, GitStatusTool, WorktreeAddTool,
+    WorktreeListTool, WorktreeLockTool, WorktreeRemoveTool, WorktreeUnlockTool,
+};
 
 /// Default directory for optional `path` in git tools (canonical).
 #[derive(Debug, Clone)]

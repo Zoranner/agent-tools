@@ -1,7 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use chrono::{TimeZone, Utc};
-use git2::{DiffFormat, DiffOptions, Repository, Signature, Status, StatusOptions};
+use git2::{
+    BranchType, DiffFormat, DiffOptions, Repository, Signature, Status, StatusOptions,
+    WorktreeAddOptions,
+};
 use serde_json::{json, Value};
 
 use crate::core::json::{json_str, ok_data};
@@ -194,4 +197,110 @@ pub(crate) fn op_git_log(ctx: &GitContext, params: &Value) -> ToolResult {
         }));
     }
     Ok(ok_data(json!({ "commits": commits })))
+}
+
+pub(crate) fn op_worktree_add(ctx: &GitContext, params: &Value) -> ToolResult {
+    let name = json_str(params, "name")?;
+    let wt_path_str = json_str(params, "path")?;
+    let branch_name = params.get("branch").and_then(|v| v.as_str());
+    let repo = open_repo(ctx, params.get("repo").and_then(|v| v.as_str()))?;
+
+    let wt_path = {
+        let p = Path::new(wt_path_str);
+        if p.is_absolute() {
+            p.to_path_buf()
+        } else {
+            combine_and_normalize(&ctx.default_repo_root, p)
+        }
+    };
+
+    let mut opts = WorktreeAddOptions::new();
+    // If a branch name is given, resolve or create it and attach to the worktree.
+    let branch_ref;
+    if let Some(bname) = branch_name {
+        let reference = match repo.find_branch(bname, BranchType::Local) {
+            Ok(b) => b.into_reference(),
+            Err(e) if e.code() == git2::ErrorCode::NotFound => {
+                // Branch does not exist — create from HEAD
+                let head_commit = repo
+                    .head()
+                    .map_err(map_git_err)?
+                    .peel_to_commit()
+                    .map_err(map_git_err)?;
+                repo.branch(bname, &head_commit, false)
+                    .map_err(map_git_err)?
+                    .into_reference()
+            }
+            Err(e) => return Err(map_git_err(e)),
+        };
+        branch_ref = reference;
+        opts.reference(Some(&branch_ref));
+    }
+
+    let wt = repo
+        .worktree(name, &wt_path, Some(&opts))
+        .map_err(map_git_err)?;
+
+    Ok(ok_data(json!({
+        "name": wt.name().unwrap_or(name),
+        "path": wt.path().to_string_lossy(),
+        "branch": branch_name.unwrap_or(""),
+    })))
+}
+
+pub(crate) fn op_worktree_list(ctx: &GitContext, params: &Value) -> ToolResult {
+    let repo = open_repo(ctx, params.get("repo").and_then(|v| v.as_str()))?;
+    let names = repo.worktrees().map_err(map_git_err)?;
+    let mut list = Vec::new();
+    for name in names.iter().flatten() {
+        let wt = repo.find_worktree(name).map_err(map_git_err)?;
+        let locked = !matches!(
+            wt.is_locked().map_err(map_git_err)?,
+            git2::WorktreeLockStatus::Unlocked
+        );
+        list.push(json!({
+            "name": name,
+            "path": wt.path().to_string_lossy(),
+            "locked": locked,
+        }));
+    }
+    Ok(ok_data(json!({ "worktrees": list })))
+}
+
+pub(crate) fn op_worktree_remove(ctx: &GitContext, params: &Value) -> ToolResult {
+    let name = json_str(params, "name")?;
+    let force = params
+        .get("force")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let repo = open_repo(ctx, params.get("repo").and_then(|v| v.as_str()))?;
+    let wt = repo.find_worktree(name).map_err(map_git_err)?;
+    let mut prune_opts = git2::WorktreePruneOptions::new();
+    prune_opts.working_tree(true);
+    prune_opts.valid(true);
+    if force {
+        prune_opts.locked(true);
+    }
+    wt.prune(Some(&mut prune_opts)).map_err(map_git_err)?;
+    Ok(ok_data(json!({ "name": name })))
+}
+
+pub(crate) fn op_worktree_lock(ctx: &GitContext, params: &Value) -> ToolResult {
+    let name = json_str(params, "name")?;
+    let reason = params.get("reason").and_then(|v| v.as_str());
+    let repo = open_repo(ctx, params.get("repo").and_then(|v| v.as_str()))?;
+    let wt = repo.find_worktree(name).map_err(map_git_err)?;
+    wt.lock(reason).map_err(map_git_err)?;
+    Ok(ok_data(json!({
+        "name": name,
+        "reason": reason.unwrap_or(""),
+    })))
+}
+
+pub(crate) fn op_worktree_unlock(ctx: &GitContext, params: &Value) -> ToolResult {
+    let name = json_str(params, "name")?;
+    let repo = open_repo(ctx, params.get("repo").and_then(|v| v.as_str()))?;
+    let wt = repo.find_worktree(name).map_err(map_git_err)?;
+    wt.unlock().map_err(map_git_err)?;
+    Ok(ok_data(json!({ "name": name })))
 }

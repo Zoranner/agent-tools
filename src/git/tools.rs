@@ -108,11 +108,93 @@ git_tool!(
     op = op_git_log
 );
 
+git_tool!(
+    WorktreeAddTool,
+    "worktree_add",
+    "Create a new linked worktree. If `branch` does not exist it is created from HEAD.",
+    schema = json!({
+        "type": "object",
+        "properties": {
+            "name":   { "type": "string", "description": "Worktree name" },
+            "path":   { "type": "string", "description": "Directory path for the new worktree" },
+            "branch": { "type": "string", "description": "Branch to check out; created from HEAD if absent" },
+            "repo":   { "type": "string", "description": "Repository path (default: context root)" }
+        },
+        "required": ["name", "path"]
+    }),
+    op = op_worktree_add
+);
+
+git_tool!(
+    WorktreeListTool,
+    "worktree_list",
+    "List all linked worktrees with their path and lock status.",
+    schema = json!({
+        "type": "object",
+        "properties": {
+            "repo": { "type": "string", "description": "Repository path (default: context root)" }
+        }
+    }),
+    op = op_worktree_list
+);
+
+git_tool!(
+    WorktreeRemoveTool,
+    "worktree_remove",
+    "Remove a linked worktree. Use `force: true` to remove even if the worktree is locked.",
+    schema = json!({
+        "type": "object",
+        "properties": {
+            "name":  { "type": "string", "description": "Worktree name" },
+            "force": { "type": "boolean", "description": "Force removal even if the worktree is locked (default false)" },
+            "repo":  { "type": "string", "description": "Repository path (default: context root)" }
+        },
+        "required": ["name"]
+    }),
+    op = op_worktree_remove
+);
+
+git_tool!(
+    WorktreeLockTool,
+    "worktree_lock",
+    "Lock a worktree to prevent accidental removal.",
+    schema = json!({
+        "type": "object",
+        "properties": {
+            "name":   { "type": "string", "description": "Worktree name" },
+            "reason": { "type": "string", "description": "Optional lock reason" },
+            "repo":   { "type": "string", "description": "Repository path (default: context root)" }
+        },
+        "required": ["name"]
+    }),
+    op = op_worktree_lock
+);
+
+git_tool!(
+    WorktreeUnlockTool,
+    "worktree_unlock",
+    "Unlock a previously locked worktree.",
+    schema = json!({
+        "type": "object",
+        "properties": {
+            "name": { "type": "string", "description": "Worktree name" },
+            "repo": { "type": "string", "description": "Repository path (default: context root)" }
+        },
+        "required": ["name"]
+    }),
+    op = op_worktree_unlock
+);
+
 pub fn all_tools(ctx: Arc<GitContext>) -> Vec<Arc<dyn Tool>> {
     vec![
         Arc::new(GitStatusTool::new(ctx.clone())),
         Arc::new(GitDiffTool::new(ctx.clone())),
         Arc::new(GitCommitTool::new(ctx.clone())),
-        Arc::new(GitLogTool::new(ctx)),
+        Arc::new(GitLogTool::new(ctx.clone())),
+        Arc::new(WorktreeAddTool::new(ctx.clone())),
+        Arc::new(WorktreeListTool::new(ctx.clone())),
+        Arc::new(WorktreeRemoveTool::new(ctx.clone())),
+        Arc::new(WorktreeLockTool::new(ctx.clone())),
+        Arc::new(WorktreeUnlockTool::new(ctx.clone())),
     ]
 }
