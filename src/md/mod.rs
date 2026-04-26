@@ -1,4 +1,4 @@
-//! Markdown analysis tools: [`extract_toc`](ExtractTocTool) and [`markdown_stats`](MarkdownStatsTool).
+//! Markdown analysis tools: [`toc_extract`](ExtractTocTool) and [`markdown_inspect`](MarkdownStatsTool).
 //!
 //! Paths resolve against [`MdContext::root_canonical`] like `fs` tools; [`MdContext::allow_outside_root`]
 //! disables the sandbox boundary check when `true`.
@@ -57,14 +57,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn extract_toc_and_markdown_stats() {
+    async fn toc_extract_and_markdown_inspect() {
         let root = tmp_root();
         let md = "# Title\n\n## Sub\n\nBody text.\n";
         fs::write(root.join("doc.md"), md).unwrap();
         let ctx = Arc::new(MdContext::new(Some(root.clone()), false).unwrap());
         let tools = all_tools(ctx);
 
-        let toc_tool = tools.iter().find(|t| t.name() == "extract_toc").unwrap();
+        let toc_tool = tools.iter().find(|t| t.name() == "toc_extract").unwrap();
         let out = toc_tool.execute(json!({ "path": "doc.md" })).await.unwrap();
         assert_eq!(out["success"], true);
         let items = out["data"]["toc"].as_array().unwrap();
@@ -75,7 +75,10 @@ mod tests {
         assert_eq!(items[1]["level"], 2);
         assert_eq!(items[1]["line"], 3);
 
-        let stats_tool = tools.iter().find(|t| t.name() == "markdown_stats").unwrap();
+        let stats_tool = tools
+            .iter()
+            .find(|t| t.name() == "markdown_inspect")
+            .unwrap();
         let c = stats_tool
             .execute(json!({ "path": "doc.md" }))
             .await

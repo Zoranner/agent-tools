@@ -4,7 +4,7 @@
 
 中文 | [English](README.md)
 
-面向 AI 智能体的 Rust 工具库，为 LLM 驱动的应用提供文件系统操作、工作区查找、网络获取、文档分析、版本控制、跨会话记忆、可插拔人机交互、工作区待办持久化，以及基于 SQLite 的任务存储（含步骤、执行记录、路径锁、检查点与产出物）。每个工具通过 JSON Schema 描述，与 OpenAI Function Calling / Anthropic Tool Use 等主流格式直接兼容。
+面向 AI 智能体的 Rust 工具库，为 LLM 驱动的应用提供文件系统操作、工作区查找、网络获取、文档分析、版本控制、跨会话记忆、可插拔人机交互和工作区待办持久化。每个工具通过 JSON Schema 描述，与 OpenAI Function Calling / Anthropic Tool Use 等主流格式直接兼容。
 
 ## 快速开始
 
@@ -35,8 +35,8 @@ async fn example() -> Result<(), agentool::ToolError> {
     let ctx = Arc::new(FsContext::new(None, false).expect("workspace root"));
     let tools = all_tools(ctx);
 
-    let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
-    let read  = tools.iter().find(|t| t.name() == "read_file").unwrap();
+    let write = tools.iter().find(|t| t.name() == "file_write").unwrap();
+    let read  = tools.iter().find(|t| t.name() == "file_read").unwrap();
 
     write.execute(serde_json::json!({
         "path": "example.txt",
@@ -53,15 +53,14 @@ async fn example() -> Result<(), agentool::ToolError> {
 
 | Feature | 工具 |
 |---------|------|
-| `fs` | `read_file` / `write_file` / `edit_file` / `create_directory` / `list_directory` / `delete_file` / `move_file` / `copy_file` |
+| `fs` | `file_read` / `file_write` / `file_edit` / `directory_create` / `directory_list` / `file_delete` / `file_move` / `file_copy` |
 | `find` | `grep_search` / `glob_search` |
 | `web` | `web_search` / `web_fetch` |
-| `md` | `extract_toc` / `markdown_stats` |
-| `git` | `git_status` / `git_diff` / `git_commit` / `git_log` |
+| `md` | `toc_extract` / `markdown_inspect` |
+| `git` | `git_status` / `git_diff` / `git_commit` / `git_log` / `worktree_add` / `worktree_list` / `worktree_remove` / `worktree_lock` / `worktree_unlock` |
 | `memory` | `memory_write` / `memory_update` / `memory_read` / `memory_search` |
 | `interact` | `interact_ask` / `interact_confirm` / `interact_notify` |
 | `todo` | `todo_add` / `todo_list` / `todo_update` / `todo_remove` |
-| `task` | `task_create` / `task_list` / `task_get` / `task_update` / `task_delete` / `task_start_run` / `task_end_run` / `task_append_step` / `task_update_step` / `task_open_checkpoint` / `task_close_checkpoint` / `task_acquire_lock` / `task_release_lock` / `task_add_artifact` |
 | `full` | 全部已发布模块 |
 
 > `exec` / `code` / `office` / `browser` / `design` / `gui` 等模块尚在规划中，暂未发布。
@@ -80,7 +79,6 @@ async fn example() -> Result<(), agentool::ToolError> {
 | `memory` | [src/memory/README.md](src/memory/README.md) | [src/memory/README.zh.md](src/memory/README.zh.md) |
 | `interact` | [src/interact/README.md](src/interact/README.md) | [src/interact/README.zh.md](src/interact/README.zh.md) |
 | `todo` | [src/todo/README.md](src/todo/README.md) | [src/todo/README.zh.md](src/todo/README.zh.md) |
-| `task` | [src/task/README.md](src/task/README.md) | [src/task/README.zh.md](src/task/README.zh.md) |
 
 规划中模块见 [src/exec/README.zh.md](src/exec/README.zh.md) 等同目录中文说明（与英文 README 成对）。
 

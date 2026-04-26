@@ -69,12 +69,12 @@ mod tests {
         let tools = all_tools(ctx.clone());
         let write = tools
             .iter()
-            .find(|t| t.name() == "write_file")
-            .expect("write_file");
+            .find(|t| t.name() == "file_write")
+            .expect("file_write");
         let read = tools
             .iter()
-            .find(|t| t.name() == "read_file")
-            .expect("read_file");
+            .find(|t| t.name() == "file_read")
+            .expect("file_read");
 
         let rel = "sub/a.txt";
         let w = write
@@ -98,12 +98,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn edit_file_unique_and_errors() {
+    async fn file_edit_unique_and_errors() {
         let root = tmp_root();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
-        let edit = tools.iter().find(|t| t.name() == "edit_file").unwrap();
+        let write = tools.iter().find(|t| t.name() == "file_write").unwrap();
+        let edit = tools.iter().find(|t| t.name() == "file_edit").unwrap();
 
         write
             .execute(json!({ "path": "x.txt", "content": "ababa" }))
@@ -138,7 +138,7 @@ mod tests {
         .await
         .unwrap();
 
-        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        let read = tools.iter().find(|t| t.name() == "file_read").unwrap();
         let r = read.execute(json!({ "path": "x.txt" })).await.unwrap();
         assert_eq!(r["data"]["content"], "aBABa");
 
@@ -146,24 +146,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_file_rejects_directory() {
+    async fn file_delete_rejects_directory() {
         let root = tmp_root();
         fs::create_dir(root.join("d")).unwrap();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let del = tools.iter().find(|t| t.name() == "delete_file").unwrap();
+        let del = tools.iter().find(|t| t.name() == "file_delete").unwrap();
         let err = del.execute(json!({ "path": "d" })).await.unwrap_err();
         assert_eq!(err.code, "INVALID_PATH");
         let _ = fs::remove_dir_all(&root);
     }
 
     #[tokio::test]
-    async fn copy_file_destination_exists() {
+    async fn file_copy_destination_exists() {
         let root = tmp_root();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
-        let copy = tools.iter().find(|t| t.name() == "copy_file").unwrap();
+        let write = tools.iter().find(|t| t.name() == "file_write").unwrap();
+        let copy = tools.iter().find(|t| t.name() == "file_copy").unwrap();
         write
             .execute(json!({ "path": "a.txt", "content": "x" }))
             .await
@@ -181,12 +181,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_file_rejects_non_integer_offset_or_limit() {
+    async fn file_read_rejects_non_integer_offset_or_limit() {
         let root = tmp_root();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
-        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        let write = tools.iter().find(|t| t.name() == "file_write").unwrap();
+        let read = tools.iter().find(|t| t.name() == "file_read").unwrap();
         write
             .execute(json!({ "path": "t.txt", "content": "a\nb\n" }))
             .await
@@ -204,11 +204,11 @@ mod tests {
     }
 
     #[test]
-    fn read_file_schema_uses_integer_contract() {
+    fn file_read_schema_uses_integer_contract() {
         let root = tmp_root();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        let read = tools.iter().find(|t| t.name() == "file_read").unwrap();
         let schema = read.schema();
         assert_eq!(schema["properties"]["offset"]["type"], "integer");
         assert_eq!(schema["properties"]["offset"]["minimum"], 1);
@@ -218,14 +218,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_directory_sorted_entries() {
+    async fn directory_list_sorted_entries() {
         let root = tmp_root();
         fs::create_dir(root.join("sub")).unwrap();
         fs::write(root.join("b.txt"), "x").unwrap();
         fs::write(root.join("a.txt"), "y").unwrap();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let list = tools.iter().find(|t| t.name() == "list_directory").unwrap();
+        let list = tools.iter().find(|t| t.name() == "directory_list").unwrap();
         let out = list.execute(json!({ "path": "." })).await.unwrap();
         assert_eq!(out["success"], true);
         let entries = out["data"]["entries"].as_array().unwrap();
@@ -238,13 +238,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn move_file_to_nested_destination() {
+    async fn file_move_to_nested_destination() {
         let root = tmp_root();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
-        let mv = tools.iter().find(|t| t.name() == "move_file").unwrap();
-        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        let write = tools.iter().find(|t| t.name() == "file_write").unwrap();
+        let mv = tools.iter().find(|t| t.name() == "file_move").unwrap();
+        let read = tools.iter().find(|t| t.name() == "file_read").unwrap();
         write
             .execute(json!({ "path": "src.txt", "content": "moved" }))
             .await
@@ -267,13 +267,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_file_preserves_crlf_and_trailing_newline() {
+    async fn file_read_preserves_crlf_and_trailing_newline() {
         let root = tmp_root();
-        // Write CRLF content at the byte level — bypassing write_file so the \r\n is verbatim.
+        // Write CRLF content at the byte level — bypassing file_write so the \r\n is verbatim.
         std::fs::write(root.join("crlf.txt"), b"line1\r\nline2\r\n").unwrap();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        let read = tools.iter().find(|t| t.name() == "file_read").unwrap();
 
         // Full read: CRLF must survive and trailing newline must be present.
         let r = read
@@ -294,12 +294,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_file_preserves_trailing_newline_lf() {
+    async fn file_read_preserves_trailing_newline_lf() {
         let root = tmp_root();
         std::fs::write(root.join("t.txt"), b"hello\nworld\n").unwrap();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        let read = tools.iter().find(|t| t.name() == "file_read").unwrap();
 
         let r = read
             .execute(serde_json::json!({ "path": "t.txt" }))
@@ -316,7 +316,7 @@ mod tests {
         let root = tmp_root();
         let ctx = Arc::new(FsContext::new(Some(root.clone()), false).expect("ctx"));
         let tools = all_tools(ctx);
-        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        let read = tools.iter().find(|t| t.name() == "file_read").unwrap();
         let outside = root.parent().expect("parent");
         // Path clearly outside sandbox root (sibling directory in temp)
         let sibling = outside.join(format!("agentool_escape_probe_{}", std::process::id()));
@@ -346,7 +346,7 @@ mod tests {
         let tools_sandbox = all_tools(ctx_sandbox);
         let read = tools_sandbox
             .iter()
-            .find(|t| t.name() == "read_file")
+            .find(|t| t.name() == "file_read")
             .unwrap();
         let err = read
             .execute(json!({ "path": path_arg.clone() }))
@@ -358,7 +358,7 @@ mod tests {
         let tools_relaxed = all_tools(ctx_relaxed);
         let read_r = tools_relaxed
             .iter()
-            .find(|t| t.name() == "read_file")
+            .find(|t| t.name() == "file_read")
             .unwrap();
         let r = read_r.execute(json!({ "path": path_arg })).await.unwrap();
         assert_eq!(r["data"]["content"], "outside-data");
@@ -373,8 +373,8 @@ mod tests {
         fs::create_dir_all(&workspace).unwrap();
         let ctx = Arc::new(FsContext::new(Some(workspace.clone()), true).unwrap());
         let tools = all_tools(ctx);
-        let write = tools.iter().find(|t| t.name() == "write_file").unwrap();
-        let read = tools.iter().find(|t| t.name() == "read_file").unwrap();
+        let write = tools.iter().find(|t| t.name() == "file_write").unwrap();
+        let read = tools.iter().find(|t| t.name() == "file_read").unwrap();
         write
             .execute(json!({
                 "path": "nested/relaxed.txt",

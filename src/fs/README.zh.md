@@ -172,4 +172,4 @@
 | `DIRECTORY_NOT_EMPTY` | 目录非空等 I/O 语义错误（映射自系统错误） |
 | `PATTERN_NOT_FOUND` | `file_edit` 的 `old_text` 未找到 |
 | `PATTERN_NOT_UNIQUE` | `file_edit` 的 `old_text` 匹配到多处 |
-| `INVALID_PATH` | 路径为空、非法、目标类型不符（如对目录调用 `delete_file`）、超出沙箱，或其它归一化/解析失败 |
+| `INVALID_PATH` | 路径为空、非法、目标类型不符（如对目录调用 `file_delete`）、超出沙箱，或其它归一化/解析失败 |
