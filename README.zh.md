@@ -1,5 +1,7 @@
 # Agent Tools
 
+[![Crates.io](https://img.shields.io/crates/v/agentool.svg)](https://crates.io/crates/agentool)
+[![docs.rs](https://docs.rs/agentool/badge.svg)](https://docs.rs/agentool)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 中文 | [English](README.md)
@@ -12,13 +14,13 @@
 
 ```toml
 [dependencies]
-agentool = { version = "0.1", features = ["fs", "find", "web", "git"] }
+agentool = { version = "0.2", features = ["fs", "find", "web", "git"] }
 ```
 
 开启全部已发布工具功能：
 
 ```toml
-agentool = { version = "0.1", features = ["full"] }
+agentool = { version = "0.2", features = ["full"] }
 ```
 
 `tokio`、`reqwest`、`git2`、`walkdir`、`regex`、`chrono` 等较重依赖均为 **可选**，由 `Cargo.toml` 里对应 feature 按需启用；不启用任何工具 feature 时，常驻依赖主要是 `async-trait`、`serde_json`、`thiserror` 与核心 `Tool` trait。
