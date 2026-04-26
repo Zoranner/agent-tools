@@ -167,6 +167,9 @@ mod tests {
     #[derive(Debug)]
     struct StubSearch;
 
+    #[derive(Debug)]
+    struct StubFetch;
+
     #[async_trait]
     impl WebSearchBackend for StubSearch {
         async fn search(
@@ -183,19 +186,40 @@ mod tests {
         }
     }
 
+    #[async_trait]
+    impl WebFetchBackend for StubFetch {
+        async fn fetch(
+            &self,
+            _client: &Client,
+            url: &reqwest::Url,
+        ) -> Result<WebFetchResult, crate::tool::ToolError> {
+            Ok(WebFetchResult {
+                content: format!("stub content from {}", url.host_str().unwrap_or("unknown")),
+                title: "stub title".to_string(),
+                url: url.as_str().to_string(),
+            })
+        }
+    }
+
     #[tokio::test]
-    async fn web_fetch_httpbin_html() {
-        let ctx = Arc::new(WebContext::new().expect("web client"));
+    async fn custom_fetch_backend() {
+        let ctx = Arc::new(
+            WebContextBuilder::new()
+                .fetch(StubFetch)
+                .build()
+                .expect("ctx"),
+        );
         let tools = all_tools(ctx);
         let fetch = tools.iter().find(|t| t.name() == "web_fetch").unwrap();
         let out = fetch
-            .execute(json!({ "url": "https://httpbin.org/html" }))
+            .execute(json!({ "url": "https://example.test/page" }))
             .await
             .expect("fetch");
         assert_eq!(out["success"], true);
         let data = &out["data"];
-        assert!(data["content"].as_str().unwrap().contains("Herman"));
-        assert!(data["url"].as_str().unwrap().contains("httpbin.org"));
+        assert_eq!(data["content"], "stub content from example.test");
+        assert_eq!(data["title"], "stub title");
+        assert_eq!(data["url"], "https://example.test/page");
     }
 
     #[tokio::test]
