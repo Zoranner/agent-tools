@@ -30,12 +30,6 @@ full = [
     "md",
     "git",
     "memory",
-    "exec",
-    "code",
-    "office",
-    "browser",
-    "design",
-    "gui",
     "todo",
     "interact",
 ]

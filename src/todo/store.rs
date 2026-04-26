@@ -5,6 +5,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use super::error::{tool_error, TodoErrorCode};
+use crate::core::atomic::write_atomic;
 use crate::tool::ToolError;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -104,21 +105,13 @@ pub(crate) fn load(path: &Path) -> Result<TodoStore, ToolError> {
 }
 
 pub(crate) fn save(path: &Path, store: &TodoStore) -> Result<(), ToolError> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| {
-            tool_error(
-                TodoErrorCode::StorageError,
-                format!("create todo store directory: {e}"),
-            )
-        })?;
-    }
     let raw = serde_json::to_string_pretty(store).map_err(|e| {
         tool_error(
             TodoErrorCode::StorageError,
             format!("serialize todo store: {e}"),
         )
     })?;
-    fs::write(path, raw).map_err(|e| {
+    write_atomic(path, raw.as_bytes()).map_err(|e| {
         tool_error(
             TodoErrorCode::StorageError,
             format!("write todo store: {e}"),

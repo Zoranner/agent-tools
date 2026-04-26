@@ -15,7 +15,7 @@ Enable only what you need in `Cargo.toml`:
 agentool = { version = "0.1", features = ["fs", "find", "web", "git"] }
 ```
 
-All published features:
+All shipped tool features:
 
 ```toml
 agentool = { version = "0.1", features = ["full"] }
@@ -61,9 +61,9 @@ async fn example() -> Result<(), agentool::ToolError> {
 | `memory` | `memory_write` / `memory_update` / `memory_read` / `memory_search` |
 | `interact` | `interact_ask` / `interact_confirm` / `interact_notify` |
 | `todo` | `todo_add` / `todo_list` / `todo_update` / `todo_remove` |
-| `full` | All published modules |
+| `full` | All shipped tool modules |
 
-> `exec` / `code` / `office` / `browser` / `design` / `gui` are planned but not shipped yet.
+> `exec` / `code` / `office` / `browser` / `design` / `gui` are planned placeholders and are not included in `full` until they ship tools.
 
 ## Tool reference
 

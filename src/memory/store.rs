@@ -11,6 +11,7 @@ use chrono::{Datelike, Utc};
 use walkdir::WalkDir;
 
 use super::error::{tool_error, MemoryErrorCode};
+use crate::core::atomic::write_atomic;
 use crate::tool::ToolError;
 
 /// 相对记忆根路径是否为总结文件 `MEMORY.md`。
@@ -89,7 +90,7 @@ pub(crate) fn append_block(
         existing.push('\n');
     }
     existing.push_str(&block);
-    fs::write(path, existing).map_err(|e| {
+    write_atomic(path, existing.as_bytes()).map_err(|e| {
         tool_error(
             MemoryErrorCode::StorageError,
             format!("write {}: {e}", path.display()),
@@ -124,7 +125,7 @@ pub(crate) fn remove_span_and_append_block(
         text.push('\n');
     }
     text.push_str(&block);
-    fs::write(path, text).map_err(|e| {
+    write_atomic(path, text.as_bytes()).map_err(|e| {
         tool_error(
             MemoryErrorCode::StorageError,
             format!("write {}: {e}", path.display()),

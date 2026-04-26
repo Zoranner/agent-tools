@@ -1,9 +1,9 @@
 use std::fs;
-use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use serde_json::{json, Value};
 
+use crate::core::atomic::write_atomic;
 use crate::core::json::{json_str, ok_data};
 use crate::core::path::{map_io_error, resolve_against_workspace_root};
 use crate::tool::{ToolError, ToolResult};
@@ -89,12 +89,7 @@ pub(crate) fn op_write_file(ctx: &FsContext, params: &Value) -> ToolResult {
     let path = json_str(params, "path")?;
     let content = json_str(params, "content")?;
     let resolved = resolve(ctx, path)?;
-    if let Some(parent) = resolved.parent() {
-        fs::create_dir_all(parent).map_err(|e| map_io_error(e, "create_dir_all"))?;
-    }
-    let mut f = fs::File::create(&resolved).map_err(|e| map_io_error(e, "create"))?;
-    f.write_all(content.as_bytes())
-        .map_err(|e| map_io_error(e, "write"))?;
+    write_atomic(&resolved, content.as_bytes()).map_err(|e| map_io_error(e, "write"))?;
     let abs = resolved
         .canonicalize()
         .unwrap_or(resolved)
@@ -129,7 +124,7 @@ pub(crate) fn op_edit_file(ctx: &FsContext, params: &Value) -> ToolResult {
         )),
         1 => {
             let updated = text.replacen(old_text, new_text, 1);
-            fs::write(&resolved, updated).map_err(|e| map_io_error(e, "write"))?;
+            write_atomic(&resolved, updated.as_bytes()).map_err(|e| map_io_error(e, "write"))?;
             let abs = resolved
                 .canonicalize()
                 .unwrap_or(resolved)

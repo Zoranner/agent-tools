@@ -2,7 +2,11 @@
 //!
 //! - [`json`]：成功响应外壳、通用 `string` 参数解析
 //! - [`blocking`]：`spawn_blocking` 包装（仅被阻塞型工具 feature 使用）
+//! - [`atomic`]：跨工具复用的原子文件写入
 //! - [`path`]：工作区根路径与沙箱（仅在有文件类/路径类 feature 时编译）
+
+#[cfg(any(feature = "fs", feature = "memory", feature = "todo"))]
+pub(crate) mod atomic;
 
 #[cfg(any(
     feature = "fs",

@@ -15,7 +15,7 @@
 agentool = { version = "0.1", features = ["fs", "find", "web", "git"] }
 ```
 
-开启全部已发布功能：
+开启全部已发布工具功能：
 
 ```toml
 agentool = { version = "0.1", features = ["full"] }
@@ -61,9 +61,9 @@ async fn example() -> Result<(), agentool::ToolError> {
 | `memory` | `memory_write` / `memory_update` / `memory_read` / `memory_search` |
 | `interact` | `interact_ask` / `interact_confirm` / `interact_notify` |
 | `todo` | `todo_add` / `todo_list` / `todo_update` / `todo_remove` |
-| `full` | 全部已发布模块 |
+| `full` | 全部已发布工具模块 |
 
-> `exec` / `code` / `office` / `browser` / `design` / `gui` 等模块尚在规划中，暂未发布。
+> `exec` / `code` / `office` / `browser` / `design` / `gui` 等模块尚在规划中，暂未发布，暂不包含在 `full` 中。
 
 ## 工具参考
 

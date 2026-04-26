@@ -240,4 +240,42 @@ mod tests {
         assert_eq!(r.len(), 1);
         assert_eq!(r[0]["snippet"], "hello");
     }
+
+    #[tokio::test]
+    #[ignore = "requires external network and live website availability"]
+    async fn live_web_fetch_example_domain() {
+        let ctx = Arc::new(WebContext::new().expect("ctx"));
+        let tools = all_tools(ctx);
+        let fetch = tools.iter().find(|t| t.name() == "web_fetch").unwrap();
+        let out = fetch
+            .execute(json!({ "url": "https://example.com/" }))
+            .await
+            .expect("fetch");
+
+        assert_eq!(out["success"], true);
+        assert_eq!(out["data"]["url"], "https://example.com/");
+        let content = out["data"]["content"].as_str().unwrap_or("");
+        assert!(content.contains("Example Domain"));
+    }
+
+    #[tokio::test]
+    #[ignore = "requires external network and DuckDuckGo availability"]
+    async fn live_web_search_duckduckgo() {
+        let ctx = Arc::new(WebContext::new().expect("ctx"));
+        let tools = all_tools(ctx);
+        let search = tools.iter().find(|t| t.name() == "web_search").unwrap();
+        let out = search
+            .execute(json!({ "query": "rust programming language", "limit": 3 }))
+            .await
+            .expect("search");
+
+        assert_eq!(out["success"], true);
+        let results = out["data"]["results"].as_array().unwrap();
+        assert!(!results.is_empty());
+        for item in results {
+            assert!(!item["title"].as_str().unwrap_or("").is_empty());
+            let url = item["url"].as_str().unwrap_or("");
+            assert!(url.starts_with("http://") || url.starts_with("https://"));
+        }
+    }
 }
