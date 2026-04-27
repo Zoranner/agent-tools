@@ -121,4 +121,53 @@ mod tests {
 
         let _ = fs::remove_dir_all(&root);
     }
+
+    #[tokio::test]
+    async fn rejects_invalid_optional_param_types() {
+        let root = tmp_root();
+        let ctx = Arc::new(
+            TodoContext::with_store_relative(Some(root.clone()), false, Path::new("todos.json"))
+                .unwrap(),
+        );
+        let tools = all_tools(ctx);
+
+        let add = tools.iter().find(|t| t.name() == "todo_add").unwrap();
+        let err = add
+            .execute(json!({
+                "title": "Ship feature",
+                "tags": "ops"
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, "INVALID_PATH");
+
+        let list = tools.iter().find(|t| t.name() == "todo_list").unwrap();
+        let err = list
+            .execute(json!({
+                "limit": "10"
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, "INVALID_PATH");
+
+        let created = add
+            .execute(json!({
+                "title": "T1"
+            }))
+            .await
+            .unwrap();
+        let id = created["data"]["id"].as_str().unwrap();
+
+        let update = tools.iter().find(|t| t.name() == "todo_update").unwrap();
+        let err = update
+            .execute(json!({
+                "id": id,
+                "status": true
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, "INVALID_PATH");
+
+        let _ = fs::remove_dir_all(&root);
+    }
 }

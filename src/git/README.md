@@ -12,7 +12,7 @@ Working tree status.
 
 | Parameter | Type | Required | Notes |
 |-----------|------|----------|--------|
-| `path` | `string` | no | Repository path; default current directory |
+| `path` | `string` | no | Repository path; defaults to the context root, then discovers the nearest enclosing Git repository |
 
 **Returns**
 
@@ -30,7 +30,7 @@ Show a textual diff.
 
 | Parameter | Type | Required | Notes |
 |-----------|------|----------|--------|
-| `path` | `string` | no | Repo or file path; default cwd |
+| `path` | `string` | no | Repo or file path; defaults to the context root, then discovers the nearest enclosing Git repository |
 | `staged` | `boolean` | no | Staged diff; default `false` |
 
 **Returns**
@@ -48,6 +48,7 @@ Stage and commit.
 | Parameter | Type | Required | Notes |
 |-----------|------|----------|--------|
 | `message` | `string` | yes | Commit message |
+| `path` | `string` | no | Repository path; defaults to the context root, then discovers the nearest enclosing Git repository |
 | `files` | `string[]` | no | Stage only these paths; default all changes |
 
 **Returns**
@@ -65,7 +66,7 @@ Commit history.
 
 | Parameter | Type | Required | Notes |
 |-----------|------|----------|--------|
-| `path` | `string` | no | Repo or file path; default cwd |
+| `path` | `string` | no | Repo or file path; defaults to the context root, then discovers the nearest enclosing Git repository |
 | `limit` | `number` | no | Default 10 |
 
 **Returns**

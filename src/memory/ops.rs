@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use chrono::Utc;
 use serde_json::{json, Value};
 
-use crate::core::json::{json_str, ok_data};
+use crate::core::json::{json_str, json_str_opt, json_string_array_opt, json_u64_opt, ok_data};
 use crate::core::path::resolve_against_workspace_root;
 use crate::tool::{ToolError, ToolResult};
 
@@ -41,7 +41,7 @@ fn normalize_key(key: &str) -> Result<&str, ToolError> {
 }
 
 fn parse_target(params: &Value) -> Result<&'static str, ToolError> {
-    match params.get("target").and_then(|v| v.as_str()) {
+    match json_str_opt(params, "target")? {
         None | Some("daily") => Ok("daily"),
         Some("summary") => Ok("summary"),
         Some(other) => Err(tool_error(
@@ -51,16 +51,8 @@ fn parse_target(params: &Value) -> Result<&'static str, ToolError> {
     }
 }
 
-fn tags_from_params(params: &Value) -> Vec<String> {
-    params
-        .get("tags")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|x| x.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default()
+fn tags_from_params(params: &Value) -> Result<Vec<String>, ToolError> {
+    Ok(json_string_array_opt(params, "tags")?.unwrap_or_default())
 }
 
 fn block_matches_tags(block: &ParsedBlock, required: &[String]) -> bool {
@@ -119,7 +111,7 @@ fn rel_path_under_root(root: &Path, path: &Path) -> String {
 pub(crate) fn op_memory_write(ctx: &MemoryContext, params: &Value) -> ToolResult {
     let key = normalize_key(json_str(params, "key")?)?;
     let content = json_str(params, "content")?;
-    let tags = tags_from_params(params);
+    let tags = tags_from_params(params)?;
     let target = parse_target(params)?;
 
     let root = memory_root(ctx)?;
@@ -152,7 +144,7 @@ pub(crate) fn op_memory_write(ctx: &MemoryContext, params: &Value) -> ToolResult
 pub(crate) fn op_memory_update(ctx: &MemoryContext, params: &Value) -> ToolResult {
     let key = normalize_key(json_str(params, "key")?)?;
     let content = json_str(params, "content")?;
-    let tags = tags_from_params(params);
+    let tags = tags_from_params(params)?;
 
     let root = memory_root(ctx)?;
     let located = collect_located_blocks(&root)?;
@@ -199,13 +191,9 @@ pub(crate) fn op_memory_read(ctx: &MemoryContext, params: &Value) -> ToolResult 
 pub(crate) fn op_memory_search(ctx: &MemoryContext, params: &Value) -> ToolResult {
     let query = json_str(params, "query")?.trim();
     let query_lc = query.to_lowercase();
-    let filter_tags = tags_from_params(params);
+    let filter_tags = tags_from_params(params)?;
 
-    let limit = params
-        .get("limit")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(10)
-        .clamp(1, 100) as usize;
+    let limit = json_u64_opt(params, "limit")?.unwrap_or(10).clamp(1, 100) as usize;
 
     let root = memory_root(ctx)?;
     let mut blocks = collect_all_blocks(&root)?;

@@ -121,4 +121,42 @@ mod tests {
             .unwrap_err();
         assert_eq!(e.code, "INTERACT_INVALID_PARAM");
     }
+
+    #[tokio::test]
+    async fn invalid_optional_param_types() {
+        let ctx = Arc::new(InteractContext::unsupported());
+        let tools = all_tools(ctx);
+
+        let ask = tools.iter().find(|t| t.name() == "interact_ask").unwrap();
+        let e = ask
+            .execute(json!({
+                "question": "hi?",
+                "options": "yes"
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(e.code, "INVALID_PATH");
+
+        let confirm = tools
+            .iter()
+            .find(|t| t.name() == "interact_confirm")
+            .unwrap();
+        let e2 = confirm
+            .execute(json!({
+                "message": "sure?",
+                "default": "yes"
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(e2.code, "INVALID_PATH");
+
+        let e3 = confirm
+            .execute(json!({
+                "message": "sure?",
+                "timeout": 1.5
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(e3.code, "INVALID_PATH");
+    }
 }

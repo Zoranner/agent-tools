@@ -186,4 +186,47 @@ summary wins
 
         let _ = fs::remove_dir_all(&root);
     }
+
+    #[tokio::test]
+    async fn rejects_invalid_optional_param_types() {
+        let root = tmp_root();
+        let ctx = Arc::new(
+            MemoryContext::with_memory_dir_relative(Some(root.clone()), false, Path::new("mem"))
+                .unwrap(),
+        );
+        let tools = all_tools(ctx);
+
+        let write = tools.iter().find(|t| t.name() == "memory_write").unwrap();
+        let err = write
+            .execute(json!({
+                "key": "k1",
+                "content": "body",
+                "tags": "ops"
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, "INVALID_PATH");
+
+        let err = write
+            .execute(json!({
+                "key": "k1",
+                "content": "body",
+                "target": true
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, "INVALID_PATH");
+
+        let search = tools.iter().find(|t| t.name() == "memory_search").unwrap();
+        let err = search
+            .execute(json!({
+                "query": "",
+                "limit": "5"
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, "INVALID_PATH");
+
+        let _ = fs::remove_dir_all(&root);
+    }
 }

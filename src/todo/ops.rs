@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use serde_json::{json, Value};
 use uuid::Uuid;
 
-use crate::core::json::{json_str, ok_data};
+use crate::core::json::{json_str, json_str_opt, json_string_array_opt, json_u64_opt, ok_data};
 use crate::core::path::resolve_against_workspace_root;
 use crate::tool::{ToolError, ToolResult};
 
@@ -27,16 +27,8 @@ fn store_path(ctx: &TodoContext) -> Result<PathBuf, ToolError> {
     )
 }
 
-fn tags_from_params(params: &Value) -> Vec<String> {
-    params
-        .get("tags")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|x| x.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default()
+fn tags_from_params(params: &Value) -> Result<Vec<String>, ToolError> {
+    Ok(json_string_array_opt(params, "tags")?.unwrap_or_default())
 }
 
 fn find_index(store: &TodoStore, id: &str) -> Option<usize> {
@@ -51,16 +43,14 @@ pub(crate) fn op_todo_add(ctx: &TodoContext, params: &Value) -> ToolResult {
             "`title` must be non-empty",
         ));
     }
-    let description = params
-        .get("description")
-        .and_then(|v| v.as_str())
+    let description = json_str_opt(params, "description")?
         .unwrap_or("")
         .to_string();
-    let priority = match params.get("priority").and_then(|v| v.as_str()) {
+    let priority = match json_str_opt(params, "priority")? {
         None => None,
         Some(s) => Some(TodoPriority::parse(s)?),
     };
-    let tags = tags_from_params(params);
+    let tags = tags_from_params(params)?;
 
     let path = store_path(ctx)?;
     let mut store: TodoStore = load(&path)?;
@@ -81,16 +71,12 @@ pub(crate) fn op_todo_add(ctx: &TodoContext, params: &Value) -> ToolResult {
 }
 
 pub(crate) fn op_todo_list(ctx: &TodoContext, params: &Value) -> ToolResult {
-    let status_filter = match params.get("status").and_then(|v| v.as_str()) {
+    let status_filter = match json_str_opt(params, "status")? {
         None => None,
         Some(s) => Some(TodoStatus::parse(s)?),
     };
-    let tag_filter = params.get("tag").and_then(|v| v.as_str());
-    let limit = params
-        .get("limit")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(50)
-        .clamp(1, 200) as usize;
+    let tag_filter = json_str_opt(params, "tag")?;
+    let limit = json_u64_opt(params, "limit")?.unwrap_or(50).clamp(1, 200) as usize;
 
     let path = store_path(ctx)?;
     let store: TodoStore = load(&path)?;
@@ -142,40 +128,31 @@ pub(crate) fn op_todo_update(ctx: &TodoContext, params: &Value) -> ToolResult {
     let now = now_rfc3339();
     {
         let it = &mut store.items[idx];
-        if let Some(v) = params.get("title") {
-            if let Some(s) = v.as_str() {
-                let t = s.trim();
-                if t.is_empty() {
-                    return Err(tool_error(
-                        TodoErrorCode::InvalidInput,
-                        "`title` cannot be empty when provided",
-                    ));
-                }
-                it.title = t.to_string();
+        if let Some(s) = json_str_opt(params, "title")? {
+            let t = s.trim();
+            if t.is_empty() {
+                return Err(tool_error(
+                    TodoErrorCode::InvalidInput,
+                    "`title` cannot be empty when provided",
+                ));
             }
+            it.title = t.to_string();
         }
-        if let Some(v) = params.get("description") {
-            if let Some(s) = v.as_str() {
-                it.description = s.to_string();
-            }
+        if let Some(s) = json_str_opt(params, "description")? {
+            it.description = s.to_string();
         }
-        if let Some(v) = params.get("status") {
-            if let Some(s) = v.as_str() {
-                it.status = TodoStatus::parse(s)?;
-            }
+        if let Some(s) = json_str_opt(params, "status")? {
+            it.status = TodoStatus::parse(s)?;
         }
         if let Some(v) = params.get("priority") {
             if v.is_null() {
                 it.priority = None;
-            } else if let Some(s) = v.as_str() {
+            } else if let Some(s) = json_str_opt(params, "priority")? {
                 it.priority = Some(TodoPriority::parse(s)?);
             }
         }
-        if let Some(arr) = params.get("tags").and_then(|v| v.as_array()) {
-            it.tags = arr
-                .iter()
-                .filter_map(|x| x.as_str().map(String::from))
-                .collect();
+        if let Some(tags) = json_string_array_opt(params, "tags")? {
+            it.tags = tags;
         }
         it.updated_at = now;
     }
