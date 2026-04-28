@@ -57,7 +57,12 @@ find_tool!(
             "pattern": { "type": "string", "description": "Regular expression pattern" },
             "path": { "type": "string", "description": "Root directory or file (default: context root)" },
             "glob": { "type": "string", "description": "Optional glob filter for paths relative to root, e.g. **/*.md" },
-            "ignore_case": { "type": "boolean", "description": "Case-insensitive matching (default false)" }
+            "ignore_case": { "type": "boolean", "description": "Case-insensitive matching (default false)" },
+            "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Max matches to return (default 100, max 1000)"
+            }
         },
         "required": ["pattern"]
     }),
@@ -72,7 +77,12 @@ find_tool!(
         "type": "object",
         "properties": {
             "pattern": { "type": "string", "description": "Glob pattern, e.g. **/*.md" },
-            "path": { "type": "string", "description": "Root directory (default: context root)" }
+            "path": { "type": "string", "description": "Root directory (default: context root)" },
+            "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Max files to return (default 100, max 1000)"
+            }
         },
         "required": ["pattern"]
     }),

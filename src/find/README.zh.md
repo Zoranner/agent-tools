@@ -8,9 +8,9 @@
 >
 > **`FindContext`**
 >
-> 与 `fs` 类似，查找工具共享一个上下文：`FindContext::new(root)` 将 `root` canonicalize 为默认扫描根；`root` 为 `None` 时使用构造瞬间的进程当前目录。
+> 与 `fs` 类似，查找工具共享一个上下文：`FindContext::new(root)` 将 `root` canonicalize 为默认扫描根，且**默认不允许越出该根**；`root` 为 `None` 时使用构造瞬间的进程当前目录。
 >
-> `grep_search` / `glob_search` 的 `path` 可省略，此时从该默认根扫描。传入相对 `path` 时相对于默认根拼接；传入绝对路径时按文件系统解析。`path` 须指向已存在的目录或文件。
+> `grep_search` / `glob_search` 的 `path` 可省略，此时从该默认根扫描。传入相对 `path` 时相对于默认根拼接；传入绝对路径时，**仅在** `FindContext::with_allow_outside_root(..., true)` **下允许越出工作区**。`path` 须指向已存在的目录或文件。
 >
 > 遍历时不会进入名为 `.git` 的目录。`grep_search` 跳过无法按 UTF-8 解码的文件。
 
@@ -24,6 +24,7 @@
 | `path` | `string` | 否 | 扫描根目录或单个文件，默认 `FindContext` 的根 |
 | `glob` | `string` | 否 | 相对根的路径 glob，如 `**/*.md`；非法时返回 `INVALID_PATTERN` |
 | `ignore_case` | `boolean` | 否 | 是否忽略大小写，默认 `false` |
+| `limit` | `number` | 否 | 最多返回多少条匹配，默认 `100`，最大 `1000` |
 
 **返回**
 
@@ -33,6 +34,7 @@
 | `matches[].file` | `string` | 文件路径 |
 | `matches[].line` | `number` | 行号 |
 | `matches[].content` | `string` | 匹配行内容 |
+| `truncated` | `boolean` | 是否因 `limit` 截断结果 |
 
 ---
 
@@ -44,12 +46,14 @@
 |------|------|------|------|
 | `pattern` | `string` | 是 | Glob 模式，如 `**/*.md`；非法时返回 `INVALID_PATTERN` |
 | `path` | `string` | 否 | 扫描根目录，默认 `FindContext` 的根 |
+| `limit` | `number` | 否 | 最多返回多少个文件，默认 `100`，最大 `1000` |
 
 **返回**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `files` | `string[]` | 匹配的文件路径列表 |
+| `truncated` | `boolean` | 是否因 `limit` 截断结果 |
 
 ## 错误码
 

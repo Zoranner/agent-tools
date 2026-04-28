@@ -8,9 +8,9 @@
 >
 > **`FindContext`**
 >
-> Like `fs`, find tools share a context: `FindContext::new(root)` canonicalizes `root` as the default scan root; `None` uses the process current directory at construction.
+> Like `fs`, find tools share a context: `FindContext::new(root)` canonicalizes `root` as the default scan root and **keeps searches inside that root by default**; `None` uses the process current directory at construction.
 >
-> `path` is optional for `grep_search` / `glob_search` (defaults to that root). Relative `path` joins to the default root; absolute paths resolve on the filesystem. `path` must exist as a file or directory.
+> `path` is optional for `grep_search` / `glob_search` (defaults to that root). Relative `path` joins to the default root; absolute paths may leave the workspace only when using `FindContext::with_allow_outside_root(..., true)`. `path` must exist as a file or directory.
 >
 > Traversal skips directories named `.git`. `grep_search` skips files that are not valid UTF-8.
 
@@ -24,6 +24,7 @@ Search file contents with a **regular expression** (Rust `regex` syntax). Plain 
 | `path` | `string` | no | Root dir or single file; default is `FindContext` root |
 | `glob` | `string` | no | Path glob under root, e.g. `**/*.md`; invalid → `INVALID_PATTERN` |
 | `ignore_case` | `boolean` | no | Default `false` |
+| `limit` | `number` | no | Max matches to return; default `100`, max `1000` |
 
 **Returns**
 
@@ -33,6 +34,7 @@ Search file contents with a **regular expression** (Rust `regex` syntax). Plain 
 | `matches[].file` | `string` |
 | `matches[].line` | `number` |
 | `matches[].content` | `string` |
+| `truncated` | `boolean` |
 
 ---
 
@@ -44,12 +46,14 @@ Match files by glob pattern.
 |-----------|------|----------|--------|
 | `pattern` | `string` | yes | e.g. `**/*.md`; invalid → `INVALID_PATTERN` |
 | `path` | `string` | no | Scan root; default `FindContext` root |
+| `limit` | `number` | no | Max files to return; default `100`, max `1000` |
 
 **Returns**
 
 | Field | Type |
 |-------|------|
 | `files` | `string[]` |
+| `truncated` | `boolean` |
 
 ## Error codes
 
