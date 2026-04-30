@@ -16,6 +16,8 @@ use std::sync::Arc;
 
 pub use backend::{WebFetchBackend, WebSearchBackend};
 pub use backends::{DirectFetchBackend, DuckDuckGoSearchBackend};
+#[cfg(feature = "tavily")]
+pub use backends::{TavilyFetchBackend, TavilySearchBackend};
 pub use tools::{all_tools, WebFetchTool, WebSearchTool};
 pub use types::{WebFetchResult, WebSearchResult};
 

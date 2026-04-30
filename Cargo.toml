@@ -12,6 +12,7 @@ default = []
 fs = ["dep:tokio"]
 find = ["dep:globset", "dep:regex", "dep:tokio", "dep:walkdir"]
 web = ["dep:htmd", "dep:regex", "dep:reqwest", "dep:serde"]
+tavily = ["web"]
 md = ["dep:regex", "dep:serde", "dep:tokio"]
 git = ["dep:chrono", "dep:git2", "dep:tokio"]
 memory = ["dep:chrono", "dep:tokio", "dep:walkdir"]
@@ -27,6 +28,7 @@ full = [
     "fs",
     "find",
     "web",
+    "tavily",
     "md",
     "git",
     "memory",
